@@ -783,6 +783,48 @@ def zerar_carteira_loja():
     flash(f"Saque total de R$ {saldo_atual:.2f} realizado com sucesso!", 'success')
     return redirect(url_for('carteira_loja'))
 
+# API para obter dados do serviço (para exportação CSV)
+@app.route('/servicos/api/<int:servico_id>', methods=['GET'])
+def api_servico(servico_id):
+    """API para obter dados de um serviço."""
+    from models_flask import Servico, ServicoPeca, Mecanico
+    
+    # Obter serviço
+    servico = Servico.query.get(servico_id)
+    if not servico:
+        return jsonify({'success': False, 'error': 'Serviço não encontrado'}), 404
+    
+    # Obter mecânico
+    mecanico = Mecanico.query.get(servico.mecanico_id)
+    
+    # Obter peças
+    pecas = ServicoPeca.query.filter_by(servico_id=servico_id).all()
+    
+    # Preparar dados do serviço
+    servico_dict = {
+        'id': servico.id,
+        'cliente': servico.cliente,
+        'telefone': servico.telefone,
+        'descricao': servico.descricao,
+        'mecanico_id': servico.mecanico_id,
+        'mecanico_nome': mecanico.nome if mecanico else '',
+        'valor_servico': servico.valor_servico,
+        'porcentagem_mecanico': servico.porcentagem_mecanico,
+        'data_criacao': servico.data_criacao.isoformat(),
+        'status': servico.status,
+        'pecas': [{
+            'id': p.id,
+            'peca_id': p.peca_id,
+            'descricao': p.descricao,
+            'codigo_barras': p.codigo_barras,
+            'preco_unitario': p.preco_unitario,
+            'quantidade': p.quantidade
+        } for p in pecas],
+        'valor_total_pecas': sum(p.preco_unitario * p.quantidade for p in pecas)
+    }
+    
+    return jsonify({'success': True, 'servico': servico_dict})
+
 # Rota para excluir serviço
 @app.route('/servicos/excluir/<int:servico_id>', methods=['POST'])
 def excluir_servico(servico_id):
