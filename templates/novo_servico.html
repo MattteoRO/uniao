@@ -354,7 +354,7 @@
         
         // Limpar resultados se o campo estiver vazio
         if (termo.length === 0) {
-            document.getElementById('resultados_busca').style.display = 'none';
+            // Não escondemos os resultados aqui para permitir que o usuário veja resultados anteriores
             return;
         }
         
@@ -366,7 +366,7 @@
         
         // Para busca por descrição, aguardar pelo menos 2 caracteres
         if (termo.length < 2) {
-            document.getElementById('resultados_busca').style.display = 'none';
+            // Não escondemos os resultados aqui para permitir que o usuário veja resultados anteriores
             return;
         }
         
@@ -488,9 +488,8 @@
         // Fechar modal
         quantidadeModal.hide();
         
-        // Limpar campo de busca
-        document.getElementById('busca_peca').value = '';
-        document.getElementById('resultados_busca').style.display = 'none';
+        // Focar novamente no campo de busca para facilitar a adição de mais peças
+        document.getElementById('busca_peca').focus();
     });
     
     // Atualizar tabela de peças
