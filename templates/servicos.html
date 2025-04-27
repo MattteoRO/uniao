@@ -290,8 +290,13 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Abrir o PDF em uma nova aba
-                            window.open(data.filepath, '_blank');
+                            // Criar link de download para o PDF
+                            const link = document.createElement('a');
+                            link.href = data.filepath;
+                            link.download = data.filename || 'documento.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
                         } else {
                             alert('Erro ao gerar o PDF. Por favor, tente novamente.');
                         }

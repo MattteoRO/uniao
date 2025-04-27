@@ -329,14 +329,17 @@ def gerar_pdf_servico(servico_id, tipo):
         
         if tipo == 'cliente':
             filepath = pdf_generator.gerar_pdf_cliente(servico_dict, config_dict)
+            filename = "preview_cliente.pdf"
         elif tipo == 'mecanico':
             filepath = pdf_generator.gerar_pdf_mecanico(servico_dict, config_dict)
+            filename = "preview_mecanico.pdf"
         elif tipo == 'loja':
             filepath = pdf_generator.gerar_pdf_loja(servico_dict, config_dict)
+            filename = "preview_loja.pdf"
         else:
             return jsonify({'error': 'Tipo de relatório inválido'})
         
-        return jsonify({'success': True, 'filepath': filepath})
+        return jsonify({'success': True, 'filepath': filepath, 'filename': filename})
     
     # Caso normal: obter serviço do banco de dados
     servico = Servico.query.get_or_404(servico_id)
@@ -375,14 +378,17 @@ def gerar_pdf_servico(servico_id, tipo):
     
     if tipo == 'cliente':
         filepath = pdf_generator.gerar_pdf_cliente(servico_dict, config_dict)
+        filename = f"servico_{servico_dict['id']}_cliente.pdf"
     elif tipo == 'mecanico':
         filepath = pdf_generator.gerar_pdf_mecanico(servico_dict, config_dict)
+        filename = f"servico_{servico_dict['id']}_mecanico.pdf"
     elif tipo == 'loja':
         filepath = pdf_generator.gerar_pdf_loja(servico_dict, config_dict)
+        filename = f"servico_{servico_dict['id']}_loja.pdf"
     else:
         return jsonify({'error': 'Tipo de relatório inválido'})
     
-    return jsonify({'success': True, 'filepath': filepath})
+    return jsonify({'success': True, 'filepath': filepath, 'filename': filename})
 
 @app.route('/configuracoes', methods=['GET', 'POST'])
 def configuracoes():
