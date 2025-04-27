@@ -17,7 +17,7 @@ class PDFGenerator:
     """
     Classe para geração de PDF de serviços.
     Gera três tipos de relatórios:
-    - Cliente: comprovante em tamanho 80mm x 200mm
+    - Cliente: comprovante em tamanho 80mm x 200mm (largura específica para comprovantes)
     - Mecânico: relatório com serviços e valores a receber
     - Loja: relatório com serviços, peças e valores totais
     """
