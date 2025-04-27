@@ -114,11 +114,11 @@ class PDFGenerator:
         elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
         elements.append(Spacer(1, 3*mm))
         
-        # Dados do cliente
+        # Dados do cliente em maiúsculo
         data = [
-            ["CLIENTE:", servico['cliente']],
-            ["TELEFONE:", servico['telefone']],
-            ["MECÂNICO:", servico['mecanico_nome']],
+            ["CLIENTE:", servico['cliente'].upper()],
+            ["TELEFONE:", servico['telefone'].upper()],
+            ["MECÂNICO:", servico['mecanico_nome'].upper()],
         ]
         
         t = Table(data, colWidths=[20*mm, 50*mm])
@@ -131,9 +131,9 @@ class PDFGenerator:
         
         elements.append(Spacer(1, 3*mm))
         
-        # Descrição do serviço
+        # Descrição do serviço em maiúsculo
         elements.append(Paragraph("<b>DESCRIÇÃO:</b>", styles["SmallNormal"]))
-        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'].upper(), styles["SmallNormal"]))
         
         elements.append(Spacer(1, 3*mm))
         
@@ -154,7 +154,7 @@ class PDFGenerator:
                 
                 data.append([
                     str(quantidade),
-                    peca.get('descricao', 'N/A'),
+                    peca.get('descricao', 'N/A').upper(),
                     f"R$ {valor_unitario:.2f}".replace('.', ','),
                     f"R$ {total:.2f}".replace('.', ',')
                 ])

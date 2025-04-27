@@ -96,9 +96,9 @@ class PDFExtratoGenerator:
         
         elements.append(Spacer(1, 5*mm))
         
-        # Dados do mecânico e da carteira
+        # Dados do mecânico e da carteira - Todos os dados do cliente em maiúsculo
         data = [
-            ["Mecânico:", mecanico['nome']],
+            ["Mecânico:", mecanico['nome'].upper()],
             ["Saldo Atual:", f"R$ {carteira['saldo']:.2f}".replace('.', ',')],
             ["Data Extrato:", data_atual],
         ]
@@ -135,7 +135,7 @@ class PDFExtratoGenerator:
                 data.append([
                     data_mov,
                     f"R$ {valor:.2f}".replace('.', ','),
-                    justificativa
+                    justificativa.upper() if justificativa else ""
                 ])
             
             # Criar tabela
