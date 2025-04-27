@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Serviço{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Novo Serviço</h1>
+    <a href="{{ url_for('servicos') }}" class="btn btn-secondary">Voltar</a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Dados do Serviço</h5>
+    </div>
+    <div class="card-body">
+        <form id="servicoForm" action="{{ url_for('novo_servico') }}" method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="cliente" class="form-label">Nome do Cliente*</label>
+                    <input type="text" class="form-control" id="cliente" name="cliente" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="telefone" class="form-label">Telefone do Cliente*</label>
+                    <input type="text" class="form-control" id="telefone" name="telefone" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="descricao" class="form-label">Descrição do Serviço*</label>
+                <textarea class="form-control" id="descricao" name="descricao" rows="2" required></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="mecanico_id" class="form-label">Mecânico Responsável*</label>
+                    <select class="form-select" id="mecanico_id" name="mecanico_id" required>
+                        <option value="">Selecione um mecânico</option>
+                        {% for mecanico in mecanicos %}
+                        <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="valor_servico" class="form-label">Valor do Serviço (R$)*</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="valor_servico" name="valor_servico" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="porcentagem_mecanico" class="form-label">Porcentagem do Mecânico*</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" value="{{ porcentagem_padrao }}" min="0" max="100" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Campo hidden para armazenar peças em JSON -->
+            <input type="hidden" id="pecas_json" name="pecas_json" value="[]">
+            
+            <hr>
+            
+            <h5 class="mb-3">Peças Utilizadas</h5>
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <label for="busca_peca" class="form-label">Buscar Peça (Digite ID, código de barras ou descrição)</label>
+                    <input type="text" class="form-control" id="busca_peca" placeholder="Digite para buscar...">
+                </div>
+                <div class="col-md-4">
+                    <label for="codigo_barras" class="form-label">Código de Barras</label>
+                    <input type="text" class="form-control" id="codigo_barras" placeholder="Escaneie o código...">
+                </div>
+            </div>
+            
+            <div id="resultados_busca" class="mb-3" style="max-height: 200px; overflow-y: auto; display: none;">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Descrição</th>
+                            <th>Preço</th>
+                            <th>Código</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista_resultados">
+                        <!-- Resultados da busca serão inseridos aqui -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="table-responsive mb-4">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Descrição</th>
+                            <th>Preço Unit.</th>
+                            <th>Qtd</th>
+                            <th>Total</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela_pecas">
+                        <!-- Peças adicionadas serão listadas aqui -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Valor Total das Peças:</td>
+                            <td id="valor_total_pecas" class="fw-bold">R$ 0,00</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Valor do Serviço:</td>
+                            <td id="valor_servico_display" class="fw-bold">R$ 0,00</td>
+                            <td></td>
+                        </tr>
+                        <tr class="table-dark">
+                            <td colspan="4" class="text-end fw-bold">Valor Total:</td>
+                            <td id="valor_total" class="fw-bold">R$ 0,00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Valores para o Mecânico</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <span class="fw-bold">Porcentagem:</span> 
+                                <span id="porcentagem_display">{{ porcentagem_padrao }}%</span>
+                            </div>
+                            <div>
+                                <span class="fw-bold">Valor a receber:</span> 
+                                <span id="valor_mecanico" class="fw-bold text-info">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Valores para a Loja</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <span class="fw-bold">Valor do serviço:</span> 
+                                <span id="valor_servico_loja">R$ 0,00</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="fw-bold">Valor das peças:</span> 
+                                <span id="valor_pecas_loja">R$ 0,00</span>
+                            </div>
+                            <div>
+                                <span class="fw-bold">Total para a loja:</span> 
+                                <span id="valor_total_loja" class="fw-bold text-success">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Gerar Relatórios em PDF</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-3">Você pode gerar os relatórios antes de salvar o serviço:</p>
+                    <div class="btn-group" id="botoes_pdf">
+                        <button type="button" class="btn btn-outline-danger" disabled>
+                            <i class="bi bi-file-pdf"></i> PDF Cliente
+                        </button>
+                        <button type="button" class="btn btn-outline-info" disabled>
+                            <i class="bi bi-file-pdf"></i> PDF Mecânico
+                        </button>
+                        <button type="button" class="btn btn-outline-success" disabled>
+                            <i class="bi bi-file-pdf"></i> PDF Loja
+                        </button>
+                    </div>
+                    <p class="text-muted mt-2"><small>Os PDFs serão gerados automaticamente após salvar o serviço.</small></p>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('servicos') }}'">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Serviço</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para adicionar quantidade -->
+<div class="modal fade" id="quantidadeModal" tabindex="-1" aria-labelledby="quantidadeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quantidadeModalLabel">Quantidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="peca_id_modal">
+                <input type="hidden" id="peca_descricao_modal">
+                <input type="hidden" id="peca_preco_modal">
+                <input type="hidden" id="peca_codigo_barras_modal">
+                
+                <div class="mb-3">
+                    <label for="quantidade_modal" class="form-label">Quantidade:</label>
+                    <input type="number" class="form-control" id="quantidade_modal" min="1" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn_adicionar_peca">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template para servico temporário que será usado para gerar PDF antes de salvar -->
+<script id="servicoTemplate" type="text/template">
+    {
+        "id": 0,
+        "cliente": "",
+        "telefone": "",
+        "descricao": "",
+        "mecanico_id": 0,
+        "mecanico_nome": "",
+        "valor_servico": 0,
+        "porcentagem_mecanico": {{ porcentagem_padrao }},
+        "data_criacao": "",
+        "status": "aberto",
+        "pecas": [],
+        "valor_total_pecas": 0
+    }
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Lista de peças do serviço
+    let pecas = [];
+    
+    // Valores totais
+    let valorTotalPecas = 0;
+    let valorServico = 0;
+    let porcentagemMecanico = {{ porcentagem_padrao }};
+    
+    // Modal de quantidade
+    const quantidadeModal = new bootstrap.Modal(document.getElementById('quantidadeModal'));
+    
+    // Buscar peças no servidor
+    let timeoutId;
+    document.getElementById('busca_peca').addEventListener('input', function() {
+        const termo = this.value.trim();
+        
+        // Limpar timeout anterior
+        clearTimeout(timeoutId);
+        
+        // Só buscar se tiver pelo menos 3 caracteres
+        if (termo.length < 3) {
+            document.getElementById('resultados_busca').style.display = 'none';
+            return;
+        }
+        
+        // Definir timeout para evitar muitas requisições
+        timeoutId = setTimeout(() => {
+            buscarPecas(termo);
+        }, 500);
+    });
+    
+    // Buscar peça por código de barras
+    document.getElementById('codigo_barras').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const codigo = this.value.trim();
+            if (codigo) {
+                buscarPecas(codigo);
+                this.value = '';
+            }
+        }
+    });
+    
+    // Função para buscar peças na API
+    function buscarPecas(termo) {
+        fetch(`/api/pecas/buscar?termo=${termo}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultadosDiv = document.getElementById('resultados_busca');
+                const listaResultados = document.getElementById('lista_resultados');
+                
+                // Limpar resultados anteriores
+                listaResultados.innerHTML = '';
+                
+                if (data.length === 0) {
+                    resultadosDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Preencher tabela de resultados
+                data.forEach(peca => {
+                    const tr = document.createElement('tr');
+                    
+                    tr.innerHTML = `
+                        <td>${peca.id}</td>
+                        <td>${peca.descricao}</td>
+                        <td>R$ ${peca.preco.toFixed(2).replace('.', ',')}</td>
+                        <td>${peca.codigo_barras || '-'}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary btn-selecionar-peca" 
+                                data-id="${peca.id}" 
+                                data-descricao="${peca.descricao}" 
+                                data-preco="${peca.preco}"
+                                data-codigo="${peca.codigo_barras || ''}">
+                                Selecionar
+                            </button>
+                        </td>
+                    `;
+                    
+                    listaResultados.appendChild(tr);
+                });
+                
+                // Adicionar eventos aos botões
+                document.querySelectorAll('.btn-selecionar-peca').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        const descricao = this.getAttribute('data-descricao');
+                        const preco = parseFloat(this.getAttribute('data-preco'));
+                        const codigo = this.getAttribute('data-codigo');
+                        
+                        // Preencher modal
+                        document.getElementById('peca_id_modal').value = id;
+                        document.getElementById('peca_descricao_modal').value = descricao;
+                        document.getElementById('peca_preco_modal').value = preco;
+                        document.getElementById('peca_codigo_barras_modal').value = codigo;
+                        
+                        // Mostrar modal
+                        quantidadeModal.show();
+                    });
+                });
+                
+                resultadosDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Erro ao buscar peças:', error);
+            });
+    }
+    
+    // Adicionar peça selecionada
+    document.getElementById('btn_adicionar_peca').addEventListener('click', function() {
+        const id = document.getElementById('peca_id_modal').value;
+        const descricao = document.getElementById('peca_descricao_modal').value;
+        const preco = parseFloat(document.getElementById('peca_preco_modal').value);
+        const codigo = document.getElementById('peca_codigo_barras_modal').value;
+        const quantidade = parseInt(document.getElementById('quantidade_modal').value);
+        
+        if (isNaN(quantidade) || quantidade < 1) {
+            alert('Por favor, informe uma quantidade válida.');
+            return;
+        }
+        
+        // Verificar se a peça já existe na lista
+        const pecaExistente = pecas.find(p => p.id === id);
+        
+        if (pecaExistente) {
+            // Atualizar quantidade
+            pecaExistente.quantidade += quantidade;
+        } else {
+            // Adicionar nova peça
+            pecas.push({
+                id: id,
+                descricao: descricao,
+                preco: preco,
+                codigo_barras: codigo,
+                quantidade: quantidade
+            });
+        }
+        
+        // Atualizar tabela e valores
+        atualizarTabelaPecas();
+        
+        // Fechar modal
+        quantidadeModal.hide();
+        
+        // Limpar campo de busca
+        document.getElementById('busca_peca').value = '';
+        document.getElementById('resultados_busca').style.display = 'none';
+    });
+    
+    // Atualizar tabela de peças
+    function atualizarTabelaPecas() {
+        const tbody = document.getElementById('tabela_pecas');
+        tbody.innerHTML = '';
+        
+        valorTotalPecas = 0;
+        
+        if (pecas.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td colspan="6" class="text-center">Nenhuma peça adicionada</td>';
+            tbody.appendChild(tr);
+        } else {
+            pecas.forEach((peca, index) => {
+                const total = peca.preco * peca.quantidade;
+                valorTotalPecas += total;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${peca.id}</td>
+                    <td>${peca.descricao}</td>
+                    <td>R$ ${peca.preco.toFixed(2).replace('.', ',')}</td>
+                    <td>${peca.quantidade}</td>
+                    <td>R$ ${total.toFixed(2).replace('.', ',')}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removerPeca(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Atualizar valores totais
+        atualizarValoresTotais();
+        
+        // Atualizar campo hidden com JSON
+        document.getElementById('pecas_json').value = JSON.stringify(pecas);
+        
+        // Habilitar botões de PDF
+        habilitarBotoesPDF();
+    }
+    
+    // Remover peça da lista
+    function removerPeca(index) {
+        pecas.splice(index, 1);
+        atualizarTabelaPecas();
+    }
+    
+    // Atualizar valores ao alterar valor do serviço
+    document.getElementById('valor_servico').addEventListener('input', function() {
+        valorServico = parseFloat(this.value) || 0;
+        atualizarValoresTotais();
+        habilitarBotoesPDF();
+    });
+    
+    // Atualizar porcentagem
+    document.getElementById('porcentagem_mecanico').addEventListener('input', function() {
+        porcentagemMecanico = parseInt(this.value) || 0;
+        document.getElementById('porcentagem_display').textContent = `${porcentagemMecanico}%`;
+        atualizarValoresTotais();
+    });
+    
+    // Atualizar valores totais
+    function atualizarValoresTotais() {
+        const valorTotal = valorServico + valorTotalPecas;
+        const valorMecanico = (valorServico * porcentagemMecanico) / 100;
+        const valorLoja = valorServico - valorMecanico + valorTotalPecas;
+        
+        document.getElementById('valor_total_pecas').textContent = `R$ ${valorTotalPecas.toFixed(2).replace('.', ',')}`;
+        document.getElementById('valor_servico_display').textContent = `R$ ${valorServico.toFixed(2).replace('.', ',')}`;
+        document.getElementById('valor_total').textContent = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+        
+        document.getElementById('valor_mecanico').textContent = `R$ ${valorMecanico.toFixed(2).replace('.', ',')}`;
+        document.getElementById('valor_servico_loja').textContent = `R$ ${(valorServico - valorMecanico).toFixed(2).replace('.', ',')}`;
+        document.getElementById('valor_pecas_loja').textContent = `R$ ${valorTotalPecas.toFixed(2).replace('.', ',')}`;
+        document.getElementById('valor_total_loja').textContent = `R$ ${valorLoja.toFixed(2).replace('.', ',')}`;
+    }
+    
+    // Habilitar botões de PDF após preencher dados mínimos
+    function habilitarBotoesPDF() {
+        const cliente = document.getElementById('cliente').value.trim();
+        const telefone = document.getElementById('telefone').value.trim();
+        const descricao = document.getElementById('descricao').value.trim();
+        const mecanico = document.getElementById('mecanico_id').value;
+        
+        const habilitado = cliente && telefone && descricao && mecanico && valorServico > 0;
+        
+        const botoes = document.querySelectorAll('#botoes_pdf button');
+        botoes.forEach(btn => {
+            btn.disabled = !habilitado;
+        });
+        
+        if (habilitado) {
+            // Adicionar eventos aos botões de PDF
+            configurarBotoesPDF();
+        }
+    }
+    
+    // Configurar botões de PDF para preview antes de salvar
+    function configurarBotoesPDF() {
+        const botoes = document.querySelectorAll('#botoes_pdf button');
+        if (botoes[0].hasAttribute('data-configured')) {
+            return;  // Já configurado
+        }
+        
+        // Marcar como configurado
+        botoes.forEach(btn => btn.setAttribute('data-configured', 'true'));
+        
+        // Cliente PDF
+        botoes[0].addEventListener('click', function() {
+            gerarPDF('cliente');
+        });
+        
+        // Mecânico PDF
+        botoes[1].addEventListener('click', function() {
+            gerarPDF('mecanico');
+        });
+        
+        // Loja PDF
+        botoes[2].addEventListener('click', function() {
+            gerarPDF('loja');
+        });
+    }
+    
+    // Preparar dados para gerar PDF temporário
+    function gerarPDF(tipo) {
+        const cliente = document.getElementById('cliente').value.trim();
+        const telefone = document.getElementById('telefone').value.trim();
+        const descricao = document.getElementById('descricao').value.trim();
+        const mecanico_id = document.getElementById('mecanico_id').value;
+        const mecanico_select = document.getElementById('mecanico_id');
+        const mecanico_nome = mecanico_select.options[mecanico_select.selectedIndex].text;
+        
+        // Criar serviço temporário para gerar PDF
+        const servicoTemp = {
+            id: 0,  // Temporário
+            cliente: cliente,
+            telefone: telefone,
+            descricao: descricao,
+            mecanico_id: parseInt(mecanico_id),
+            mecanico_nome: mecanico_nome,
+            valor_servico: valorServico,
+            porcentagem_mecanico: porcentagemMecanico,
+            data_criacao: new Date().toISOString(),
+            status: 'aberto',
+            pecas: pecas,
+            valor_total_pecas: valorTotalPecas
+        };
+        
+        // Converter para string e enviar para o servidor
+        enviarDadosParaPDF(servicoTemp, tipo);
+    }
+    
+    // Enviar dados para o servidor gerar PDF
+    function enviarDadosParaPDF(servico, tipo) {
+        // Como não temos ID real ainda, usamos uma rota especial
+        fetch('/servicos/gerar_pdf/0/' + tipo, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(servico)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`PDF ${tipo} gerado em: ${data.filepath}`);
+            } else {
+                alert('Erro ao gerar PDF: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao enviar dados para gerar PDF:', error);
+        });
+    }
+    
+    // Eventos para campos que afetam os botões de PDF
+    ['cliente', 'telefone', 'descricao', 'mecanico_id'].forEach(id => {
+        document.getElementById(id).addEventListener('input', habilitarBotoesPDF);
+    });
+    
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+        // Valor inicial da porcentagem
+        document.getElementById('porcentagem_display').textContent = `${porcentagemMecanico}%`;
+    });
+</script>
+{% endblock %}
