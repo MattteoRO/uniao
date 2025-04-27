@@ -104,13 +104,16 @@
                                     R$ {{ mov.valor|number_format(2, ',', '.') }}
                                 </td>
                                 <td>
-                                    {% if mov.servico_id %}
-                                    <a href="{{ url_for('servicos') }}?id={{ mov.servico_id }}" class="btn btn-sm btn-outline-info">
-                                        Ver Serviço
-                                    </a>
-                                    {% else %}
-                                    -
-                                    {% endif %}
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-info" onclick="verResumoFinanceiro()">
+                                            Ver
+                                        </button>
+                                        {% if mov.servico_id %}
+                                        <a href="{{ url_for('servicos') }}?id={{ mov.servico_id }}" class="btn btn-sm btn-outline-secondary">
+                                            Serviço
+                                        </a>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -132,6 +135,250 @@
             </div>
             <div class="card-body">
                 <canvas id="graficoMovimentacoes" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Resumo Financeiro -->
+<div class="modal fade" id="verResumoModal" tabindex="-1" aria-labelledby="verResumoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="verResumoModalLabel">Resumo Financeiro Detalhado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="financialTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="resumo-tab" data-bs-toggle="tab" data-bs-target="#resumo" 
+                                type="button" role="tab" aria-controls="resumo" aria-selected="true">
+                            Resumo Geral
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="servicos-tab" data-bs-toggle="tab" data-bs-target="#servicos" 
+                                type="button" role="tab" aria-controls="servicos" aria-selected="false">
+                            Serviços
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pecas-tab" data-bs-toggle="tab" data-bs-target="#pecas" 
+                                type="button" role="tab" aria-controls="pecas" aria-selected="false">
+                            Peças
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="retiradas-tab" data-bs-toggle="tab" data-bs-target="#retiradas" 
+                                type="button" role="tab" aria-controls="retiradas" aria-selected="false">
+                            Retiradas
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="financialTabsContent">
+                    <!-- Resumo Geral -->
+                    <div class="tab-pane fade show active" id="resumo" role="tabpanel" aria-labelledby="resumo-tab">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">Receitas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Serviços (sem parte mecânicos):</td>
+                                                    <td class="text-end text-success" id="resumo_servicos">R$ 0,00</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Peças:</td>
+                                                    <td class="text-end text-success" id="resumo_pecas">R$ 0,00</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Outras entradas:</td>
+                                                    <td class="text-end text-success" id="resumo_outras_entradas">R$ 0,00</td>
+                                                </tr>
+                                                <tr class="table-light">
+                                                    <th>Total Receitas:</th>
+                                                    <th class="text-end text-success" id="resumo_total_receitas">R$ 0,00</th>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-danger text-white">
+                                        <h6 class="mb-0">Despesas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Pagamentos a mecânicos:</td>
+                                                    <td class="text-end text-danger" id="resumo_pagamentos_mecanicos">R$ 0,00</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Retiradas:</td>
+                                                    <td class="text-end text-danger" id="resumo_retiradas">R$ 0,00</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Outros gastos:</td>
+                                                    <td class="text-end text-danger" id="resumo_outros_gastos">R$ 0,00</td>
+                                                </tr>
+                                                <tr class="table-light">
+                                                    <th>Total Despesas:</th>
+                                                    <th class="text-end text-danger" id="resumo_total_despesas">R$ 0,00</th>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">Balanço Final</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Saldo Atual:</span>
+                                                <span class="h4 mb-0" id="resumo_saldo_atual">R$ 0,00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-warning">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Lucro Líquido (período):</span>
+                                                <span class="h4 mb-0" id="resumo_lucro_liquido">R$ 0,00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Serviços -->
+                    <div class="tab-pane fade" id="servicos" role="tabpanel" aria-labelledby="servicos-tab">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Valores de serviços representam apenas a parte da loja (20% da mão de obra), já com desconto da parte do mecânico.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="tabela_servicos">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Serviço</th>
+                                        <th>Mecânico</th>
+                                        <th class="text-end">Valor Total</th>
+                                        <th class="text-end">Parte Mecânico</th>
+                                        <th class="text-end">Parte Loja</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_servicos">
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Carregando...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <th colspan="3">Total:</th>
+                                        <th class="text-end" id="total_servicos">R$ 0,00</th>
+                                        <th class="text-end" id="total_parte_mecanicos">R$ 0,00</th>
+                                        <th class="text-end" id="total_parte_loja">R$ 0,00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Peças -->
+                    <div class="tab-pane fade" id="pecas" role="tabpanel" aria-labelledby="pecas-tab">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Valores de peças representam o valor total das peças utilizadas nos serviços.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="tabela_pecas">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Serviço</th>
+                                        <th>Peça</th>
+                                        <th class="text-end">Preço Unit.</th>
+                                        <th class="text-end">Qtd</th>
+                                        <th class="text-end">Valor Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_pecas">
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Carregando...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <th colspan="5">Total Peças:</th>
+                                        <th class="text-end" id="total_pecas">R$ 0,00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Retiradas -->
+                    <div class="tab-pane fade" id="retiradas" role="tabpanel" aria-labelledby="retiradas-tab">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle"></i> Retiradas são descontadas do valor da mão de obra, podendo resultar em saldo negativo.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="tabela_retiradas">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th class="text-end">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_retiradas">
+                                    <tr>
+                                        <td colspan="3" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Carregando...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <th colspan="2">Total Retiradas:</th>
+                                        <th class="text-end" id="total_retiradas">R$ 0,00</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary" id="btn_imprimir_resumo">
+                    <i class="bi bi-printer"></i> Imprimir Relatório
+                </button>
             </div>
         </div>
     </div>
@@ -321,6 +568,45 @@
         document.getElementById('btn_gerar_pdf').addEventListener('click', function() {
             window.print();
         });
+        
+        // Configurar impressão do relatório detalhado
+        document.getElementById('btn_imprimir_resumo').addEventListener('click', function() {
+            const conteudo = document.getElementById('financialTabsContent').innerHTML;
+            const janelaImpressao = window.open('', '', 'height=600,width=800');
+            
+            janelaImpressao.document.write(`
+                <html>
+                <head>
+                    <title>Relatório Financeiro Detalhado - Monark Motopeças</title>
+                    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+                    <style>
+                        body { padding: 20px; }
+                        @media print {
+                            .no-print { display: none; }
+                            body { color: #000; }
+                            .card { border: 1px solid #ddd; margin-bottom: 15px; }
+                            .card-header { background-color: #f5f5f5; padding: 10px; font-weight: bold; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2 class="mb-4">Relatório Financeiro Detalhado - Monark Motopeças</h2>
+                        <p>Data: ${new Date().toLocaleDateString()}</p>
+                        <hr>
+                        ${conteudo}
+                        <div class="no-print mt-4">
+                            <button onclick="window.print()" class="btn btn-primary">Imprimir</button>
+                            <button onclick="window.close()" class="btn btn-secondary">Fechar</button>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            
+            janelaImpressao.document.close();
+            janelaImpressao.focus();
+        });
     });
     
     // Função para exportar tabela para CSV
@@ -354,6 +640,298 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+    
+    // Formatar valores para moeda
+    function formatarValor(valor) {
+        return valor.toFixed(2).replace('.', ',');
+    }
+    
+    // Função para carregar os dados financeiros detalhados
+    function verResumoFinanceiro() {
+        // Obter parâmetros de filtro atuais
+        const dataInicio = document.getElementById('data_inicio').value;
+        const dataFim = document.getElementById('data_fim').value;
+        
+        // Exibir modal
+        const modal = new bootstrap.Modal(document.getElementById('verResumoModal'));
+        modal.show();
+        
+        // Resetar as tabelas para mostrar loading
+        document.getElementById('tbody_servicos').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        document.getElementById('tbody_pecas').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        document.getElementById('tbody_retiradas').innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        // Carregar dados do resumo financeiro via AJAX
+        fetch(`/api/carteira/loja/resumo?data_inicio=${dataInicio}&data_fim=${dataFim}`)
+            .then(response => response.json())
+            .then(data => {
+                // Apenas para teste inicial, populando com dados estáticos
+                if (!data || !data.success) {
+                    // Mostrar um resumo com os dados da página atual
+                    // Em produção, esses valores viriam da API
+                    
+                    // Dados do resumo
+                    // Valores estáticos para teste
+                    const saldoAtual = {{ carteira.saldo }};
+                    
+                    // Determinar movimentações por categoria
+                    const servicosValor = {{ movimentacoes|selectattr('justificativa', 'search', 'Serviço')|selectattr('valor', '>', 0)|sum(attribute='valor')|default(0) }};
+                    const pecasValor = {{ movimentacoes|selectattr('justificativa', 'search', 'peça')|selectattr('valor', '>', 0)|sum(attribute='valor')|default(0) }};
+                    const outrasEntradas = {{ movimentacoes|selectattr('valor', '>', 0)|rejectattr('justificativa', 'search', 'Serviço')|rejectattr('justificativa', 'search', 'peça')|sum(attribute='valor')|default(0) }};
+                    
+                    const pagamentosMecanicos = {{ movimentacoes|selectattr('justificativa', 'search', 'Pagamento')|selectattr('valor', '<', 0)|sum(attribute='valor')|abs|default(0) }};
+                    const retiradas = {{ movimentacoes|selectattr('justificativa', 'search', 'Retirada')|selectattr('valor', '<', 0)|sum(attribute='valor')|abs|default(0) }};
+                    const outrosGastos = {{ movimentacoes|selectattr('valor', '<', 0)|rejectattr('justificativa', 'search', 'Pagamento')|rejectattr('justificativa', 'search', 'Retirada')|sum(attribute='valor')|abs|default(0) }};
+                    
+                    // Totais
+                    const totalReceitas = servicosValor + pecasValor + outrasEntradas;
+                    const totalDespesas = pagamentosMecanicos + retiradas + outrosGastos;
+                    const lucroLiquido = totalReceitas - totalDespesas;
+                    
+                    // Atualizar interface
+                    document.getElementById('resumo_servicos').textContent = `R$ ${formatarValor(servicosValor)}`;
+                    document.getElementById('resumo_pecas').textContent = `R$ ${formatarValor(pecasValor)}`;
+                    document.getElementById('resumo_outras_entradas').textContent = `R$ ${formatarValor(outrasEntradas)}`;
+                    document.getElementById('resumo_total_receitas').textContent = `R$ ${formatarValor(totalReceitas)}`;
+                    
+                    document.getElementById('resumo_pagamentos_mecanicos').textContent = `R$ ${formatarValor(pagamentosMecanicos)}`;
+                    document.getElementById('resumo_retiradas').textContent = `R$ ${formatarValor(retiradas)}`;
+                    document.getElementById('resumo_outros_gastos').textContent = `R$ ${formatarValor(outrosGastos)}`;
+                    document.getElementById('resumo_total_despesas').textContent = `R$ ${formatarValor(totalDespesas)}`;
+                    
+                    document.getElementById('resumo_saldo_atual').textContent = `R$ ${formatarValor(saldoAtual)}`;
+                    document.getElementById('resumo_lucro_liquido').textContent = `R$ ${formatarValor(lucroLiquido)}`;
+                    
+                    // Preencher tabelas de detalhes
+                    preencherTabelaServicos();
+                    preencherTabelaPecas();
+                    preencherTabelaRetiradas();
+                    
+                    return;
+                }
+                
+                // Se tivermos dados da API, usar eles aqui
+                const resumo = data.resumo;
+                
+                // Atualizar interface com dados da API
+                document.getElementById('resumo_servicos').textContent = `R$ ${formatarValor(resumo.servicos_valor)}`;
+                document.getElementById('resumo_pecas').textContent = `R$ ${formatarValor(resumo.pecas_valor)}`;
+                document.getElementById('resumo_outras_entradas').textContent = `R$ ${formatarValor(resumo.outras_entradas)}`;
+                document.getElementById('resumo_total_receitas').textContent = `R$ ${formatarValor(resumo.total_receitas)}`;
+                
+                document.getElementById('resumo_pagamentos_mecanicos').textContent = `R$ ${formatarValor(resumo.pagamentos_mecanicos)}`;
+                document.getElementById('resumo_retiradas').textContent = `R$ ${formatarValor(resumo.retiradas)}`;
+                document.getElementById('resumo_outros_gastos').textContent = `R$ ${formatarValor(resumo.outros_gastos)}`;
+                document.getElementById('resumo_total_despesas').textContent = `R$ ${formatarValor(resumo.total_despesas)}`;
+                
+                document.getElementById('resumo_saldo_atual').textContent = `R$ ${formatarValor(resumo.saldo_atual)}`;
+                document.getElementById('resumo_lucro_liquido').textContent = `R$ ${formatarValor(resumo.lucro_liquido)}`;
+                
+                // Preencher tabelas com dados detalhados
+                if (data.servicos) {
+                    preencherTabelaServicos(data.servicos);
+                } else {
+                    preencherTabelaServicos();
+                }
+                
+                if (data.pecas) {
+                    preencherTabelaPecas(data.pecas);
+                } else {
+                    preencherTabelaPecas();
+                }
+                
+                if (data.retiradas) {
+                    preencherTabelaRetiradas(data.retiradas);
+                } else {
+                    preencherTabelaRetiradas();
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar resumo financeiro:', error);
+                
+                // Exibir mensagem de erro
+                document.getElementById('resumo').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Erro ao carregar os dados: ${error.message || 'Erro desconhecido'}
+                    </div>
+                `;
+                
+                // Exibir erro nas tabelas
+                document.getElementById('tbody_servicos').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-danger">
+                            Erro ao carregar os dados
+                        </td>
+                    </tr>
+                `;
+                
+                document.getElementById('tbody_pecas').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-danger">
+                            Erro ao carregar os dados
+                        </td>
+                    </tr>
+                `;
+                
+                document.getElementById('tbody_retiradas').innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center text-danger">
+                            Erro ao carregar os dados
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    // Função para preencher a tabela de serviços
+    function preencherTabelaServicos(servicos = []) {
+        const tbody = document.getElementById('tbody_servicos');
+        
+        if (!servicos || servicos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        Nenhum serviço encontrado no período selecionado.
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('total_servicos').textContent = 'R$ 0,00';
+            document.getElementById('total_parte_mecanicos').textContent = 'R$ 0,00';
+            document.getElementById('total_parte_loja').textContent = 'R$ 0,00';
+            return;
+        }
+        
+        let html = '';
+        let totalServicos = 0;
+        let totalParteMecanicos = 0;
+        let totalParteLoja = 0;
+        
+        servicos.forEach(servico => {
+            totalServicos += servico.valor_total;
+            totalParteMecanicos += servico.valor_mecanico;
+            totalParteLoja += servico.valor_loja;
+            
+            html += `
+                <tr>
+                    <td>${new Date(servico.data).toLocaleDateString()}</td>
+                    <td>${servico.descricao}</td>
+                    <td>${servico.mecanico}</td>
+                    <td class="text-end">R$ ${formatarValor(servico.valor_total)}</td>
+                    <td class="text-end">R$ ${formatarValor(servico.valor_mecanico)}</td>
+                    <td class="text-end">R$ ${formatarValor(servico.valor_loja)}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        document.getElementById('total_servicos').textContent = `R$ ${formatarValor(totalServicos)}`;
+        document.getElementById('total_parte_mecanicos').textContent = `R$ ${formatarValor(totalParteMecanicos)}`;
+        document.getElementById('total_parte_loja').textContent = `R$ ${formatarValor(totalParteLoja)}`;
+    }
+    
+    // Função para preencher a tabela de peças
+    function preencherTabelaPecas(pecas = []) {
+        const tbody = document.getElementById('tbody_pecas');
+        
+        if (!pecas || pecas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        Nenhuma peça encontrada no período selecionado.
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('total_pecas').textContent = 'R$ 0,00';
+            return;
+        }
+        
+        let html = '';
+        let totalPecas = 0;
+        
+        pecas.forEach(peca => {
+            const valorTotal = peca.preco_unitario * peca.quantidade;
+            totalPecas += valorTotal;
+            
+            html += `
+                <tr>
+                    <td>${new Date(peca.data).toLocaleDateString()}</td>
+                    <td>${peca.servico_descricao}</td>
+                    <td>${peca.descricao}</td>
+                    <td class="text-end">R$ ${formatarValor(peca.preco_unitario)}</td>
+                    <td class="text-end">${peca.quantidade}</td>
+                    <td class="text-end">R$ ${formatarValor(valorTotal)}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        document.getElementById('total_pecas').textContent = `R$ ${formatarValor(totalPecas)}`;
+    }
+    
+    // Função para preencher a tabela de retiradas
+    function preencherTabelaRetiradas(retiradas = []) {
+        const tbody = document.getElementById('tbody_retiradas');
+        
+        if (!retiradas || retiradas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center">
+                        Nenhuma retirada encontrada no período selecionado.
+                    </td>
+                </tr>
+            `;
+            
+            document.getElementById('total_retiradas').textContent = 'R$ 0,00';
+            return;
+        }
+        
+        let html = '';
+        let totalRetiradas = 0;
+        
+        retiradas.forEach(retirada => {
+            const valor = Math.abs(retirada.valor);
+            totalRetiradas += valor;
+            
+            html += `
+                <tr>
+                    <td>${new Date(retirada.data).toLocaleDateString()}</td>
+                    <td>${retirada.descricao}</td>
+                    <td class="text-end">R$ ${formatarValor(valor)}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+        document.getElementById('total_retiradas').textContent = `R$ ${formatarValor(totalRetiradas)}`;
     }
 </script>
 {% endblock %}
