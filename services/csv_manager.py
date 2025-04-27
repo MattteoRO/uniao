@@ -35,9 +35,9 @@ class CSVManager:
         Busca peças no arquivo CSV, utilizando lógica específica baseada no termo de busca.
         
         Lógica:
-        1. Se o termo tiver apenas números e até 6 dígitos: busca por ID exato
+        1. Se o termo tiver apenas números: busca por ID exato em toda a coluna ID
         2. Se o termo tiver letras ou combinação de letras/números: busca na DESCRICAO
-        3. Se o termo tiver apenas números e mais de 8 dígitos: busca por CODBARRAS
+        3. Se o termo incluir código de barras: busca por CODBARRAS
         
         Args:
             termo_busca (str, optional): Termo para filtrar a busca
@@ -46,47 +46,43 @@ class CSVManager:
             list: Lista de peças encontradas
         """
         try:
-            if not termo_busca:
-                caminho = self.obter_caminho_completo()
-                # Retorna as primeiras 20 peças se não houver termo
-                if os.path.exists(caminho):
-                    pecas = []
-                    count = 0
-                    with open(caminho, 'r', encoding='utf-8-sig') as arquivo:
-                        leitor = csv.DictReader(arquivo)
-                        for linha in leitor:
-                            if count >= 20:
-                                break
-                                
-                            # Tratar preço: substituir "," por "." e converter para float
-                            preco_str = linha.get('PRECOVENDA', '0')
-                            preco_str = preco_str.replace('.', '').replace(',', '.')
-                            try:
-                                preco = float(preco_str)
-                            except ValueError:
-                                preco = 0.0
-                            
-                            peca = {
-                                'id': linha.get('ID', ''),
-                                'descricao': linha.get('DESCRICAO', ''),
-                                'preco': preco,
-                                'codigo_barras': linha.get('CODBARRAS', '') if linha.get('CODBARRAS', 'NULL') != 'NULL' else ''
-                            }
-                            pecas.append(peca)
-                            count += 1
-                    return pecas
-                return []
-                
             caminho = self.obter_caminho_completo()
             if not os.path.exists(caminho):
                 print(f"Arquivo CSV não encontrado: {caminho}")
                 return []
-            
+                
+            if not termo_busca:
+                # Retorna as primeiras 50 peças se não houver termo
+                pecas = []
+                count = 0
+                with open(caminho, 'r', encoding='utf-8-sig') as arquivo:
+                    leitor = csv.DictReader(arquivo)
+                    for linha in leitor:
+                        if count >= 50:
+                            break
+                            
+                        # Tratar preço: substituir "," por "." e converter para float
+                        preco_str = linha.get('PRECOVENDA', '0')
+                        preco_str = preco_str.replace('.', '').replace(',', '.')
+                        try:
+                            preco = float(preco_str)
+                        except ValueError:
+                            preco = 0.0
+                        
+                        peca = {
+                            'id': linha.get('ID', ''),
+                            'descricao': linha.get('DESCRICAO', ''),
+                            'preco': preco,
+                            'codigo_barras': linha.get('CODBARRAS', '') if linha.get('CODBARRAS', 'NULL') != 'NULL' else ''
+                        }
+                        pecas.append(peca)
+                        count += 1
+                return pecas
+                
             # Determinar o tipo de busca
             termo_limpo = termo_busca.strip()
-            busca_por_id = termo_limpo.isdigit() and len(termo_limpo) <= 6
-            busca_por_codbarras = termo_limpo.isdigit() and len(termo_limpo) >= 8
-            busca_por_descricao = not (busca_por_id or busca_por_codbarras)
+            busca_por_id = termo_limpo.isdigit()  # Qualquer número é considerado possível ID
+            busca_por_descricao = not termo_limpo.isdigit()  # Se não for apenas números, busca por descrição
             
             pecas = []
             with open(caminho, 'r', encoding='utf-8-sig') as arquivo:
@@ -95,11 +91,16 @@ class CSVManager:
                     adicionar_peca = False
                     
                     # Aplicar a lógica de busca conforme o tipo
-                    if busca_por_id and linha.get('ID', '') == termo_limpo:
-                        adicionar_peca = True
-                    elif busca_por_codbarras and linha.get('CODBARRAS', '') == termo_limpo:
-                        adicionar_peca = True
-                    elif busca_por_descricao and termo_limpo.lower() in linha.get('DESCRICAO', '').lower():
+                    if busca_por_id:
+                        # Verificar se o ID coincide
+                        if linha.get('ID', '') == termo_limpo:
+                            adicionar_peca = True
+                        # Verificar se o código de barras coincide
+                        elif linha.get('CODBARRAS', '') == termo_limpo:
+                            adicionar_peca = True
+                    
+                    # Busca por descrição (mesmo se já encontrou por ID)
+                    if busca_por_descricao and termo_limpo.lower() in linha.get('DESCRICAO', '').lower():
                         adicionar_peca = True
                     
                     if adicionar_peca:

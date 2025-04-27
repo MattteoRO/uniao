@@ -165,28 +165,7 @@
                 </div>
             </div>
             
-            <div class="card mb-4">
-                <div class="card-header bg-warning">
-                    <h5 class="mb-0">Gerar Relatórios em PDF</h5>
-                </div>
-                <div class="card-body text-center">
-                    <p class="text-muted mb-3">Você pode gerar os relatórios antes de salvar o serviço:</p>
-                    <div class="btn-group" id="botoes_pdf">
-                        <button type="button" class="btn btn-outline-danger" disabled>
-                            <i class="bi bi-file-pdf"></i> PDF Cliente
-                        </button>
-                        <button type="button" class="btn btn-outline-info" disabled>
-                            <i class="bi bi-file-pdf"></i> PDF Mecânico
-                        </button>
-                        <button type="button" class="btn btn-outline-success" disabled>
-                            <i class="bi bi-file-pdf"></i> PDF Loja
-                        </button>
-                    </div>
-                    <p class="text-muted mt-2"><small>Os PDFs serão gerados automaticamente após salvar o serviço.</small></p>
-                </div>
-            </div>
-            
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center">
                 <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('servicos') }}'">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Serviço</button>
             </div>
