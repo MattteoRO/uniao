@@ -31,11 +31,14 @@ class CarteiraService:
             valor_servico = servico.valor_servico
             porcentagem_mecanico = servico.porcentagem_mecanico
             
-            # Valor para o mecânico (apenas % da mão de obra)
-            valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
+            # Valor para o mecânico (sempre 80% da mão de obra)
+            valor_mecanico = (valor_servico * 80) / 100
             
-            # Valor total para a loja (peças + restante da mão de obra)
-            valor_loja = valor_total_pecas + (valor_servico - valor_mecanico)
+            # Valor da mão de obra para a loja (20% da mão de obra)
+            valor_loja_servico = (valor_servico * 20) / 100
+            
+            # Valor total para a loja (100% das peças + 20% da mão de obra)
+            valor_loja = valor_total_pecas + valor_loja_servico
             
             # Verificar se existem as carteiras
             # 1. Carteira da loja
@@ -74,19 +77,33 @@ class CarteiraService:
                 # Atualizar saldo do mecânico
                 carteira_mecanico.saldo += valor_mecanico
             
-            # Registrar movimentação para a loja
-            if valor_loja > 0:
-                movimentacao_loja = Movimentacao(
+            # Registrar movimentação para a loja (parte da mão de obra)
+            if valor_loja_servico > 0:
+                movimentacao_loja_servico = Movimentacao(
                     carteira_id=carteira_loja.id,
-                    valor=valor_loja,
-                    justificativa=f"Recebimento de serviço #{servico.id} (peças + % serviço)",
+                    valor=valor_loja_servico,
+                    justificativa=f"Recebimento de serviço #{servico.id} (20% da mão de obra)",
                     data=datetime.now(),
                     servico_id=servico.id
                 )
-                db.session.add(movimentacao_loja)
+                db.session.add(movimentacao_loja_servico)
                 
                 # Atualizar saldo da loja
-                carteira_loja.saldo += valor_loja
+                carteira_loja.saldo += valor_loja_servico
+            
+            # Registrar movimentação para a loja (peças)
+            if valor_total_pecas > 0:
+                movimentacao_loja_pecas = Movimentacao(
+                    carteira_id=carteira_loja.id,
+                    valor=valor_total_pecas,
+                    justificativa=f"Peças do serviço #{servico.id}",
+                    data=datetime.now(),
+                    servico_id=servico.id
+                )
+                db.session.add(movimentacao_loja_pecas)
+                
+                # Atualizar saldo da loja
+                carteira_loja.saldo += valor_total_pecas
             
             # Salvar todas as alterações
             db.session.commit()

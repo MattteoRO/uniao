@@ -92,10 +92,11 @@ class CSVManager:
                     
                     # Aplicar a lógica de busca conforme o tipo
                     if busca_por_id:
-                        # Verificar se o ID coincide
-                        if linha.get('ID', '') == termo_limpo:
+                        # Verificar se o ID contém o termo de busca (busca parcial por ID)
+                        id_peca = linha.get('ID', '')
+                        if termo_limpo in id_peca:
                             adicionar_peca = True
-                        # Verificar se o código de barras coincide
+                        # Verificar se o código de barras coincide (busca exata por código de barras)
                         elif linha.get('CODBARRAS', '') == termo_limpo:
                             adicionar_peca = True
                     
