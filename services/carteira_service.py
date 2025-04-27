@@ -1,158 +1,98 @@
 """
-Serviço para gerenciar carteiras e movimentações financeiras.
+Serviço de Gerenciamento de Carteiras
+Responsável por criar e gerenciar carteiras e movimentações financeiras.
 """
+from flask import current_app
 from datetime import datetime
-from models_flask import db, Carteira, Movimentacao
-
 
 class CarteiraService:
-    """
-    Classe para gerenciar as carteiras e movimentações financeiras.
-    """
-    
-    @staticmethod
-    def obter_carteira_por_tipo(tipo, mecanico_id=None):
-        """
-        Obtém uma carteira pelo tipo.
-        
-        Args:
-            tipo (str): Tipo da carteira ('mecanico' ou 'loja')
-            mecanico_id (int, optional): ID do mecânico (para tipo 'mecanico')
-            
-        Returns:
-            Carteira: Instância da carteira ou None se não encontrada
-        """
-        if tipo == 'mecanico' and mecanico_id:
-            return Carteira.query.filter_by(tipo=tipo, mecanico_id=mecanico_id).first()
-        elif tipo == 'loja':
-            return Carteira.query.filter_by(tipo=tipo).first()
-        return None
-    
-    @staticmethod
-    def obter_carteira_loja():
-        """
-        Obtém a carteira da loja.
-        
-        Returns:
-            Carteira: Instância da carteira da loja ou None se não encontrada
-        """
-        return Carteira.query.filter_by(tipo='loja').first()
-    
-    @staticmethod
-    def obter_carteira_mecanico(mecanico_id):
-        """
-        Obtém a carteira de um mecânico.
-        
-        Args:
-            mecanico_id (int): ID do mecânico
-            
-        Returns:
-            Carteira: Instância da carteira do mecânico ou None se não encontrada
-        """
-        return Carteira.query.filter_by(tipo='mecanico', mecanico_id=mecanico_id).first()
-    
-    @staticmethod
-    def registrar_movimentacao(carteira_id, valor, justificativa, servico_id=None):
-        """
-        Registra uma movimentação em uma carteira.
-        
-        Args:
-            carteira_id (int): ID da carteira
-            valor (float): Valor da movimentação (positivo para entrada, negativo para saída)
-            justificativa (str): Justificativa da movimentação
-            servico_id (int, optional): ID do serviço relacionado
-            
-        Returns:
-            bool: True se a movimentação foi registrada com sucesso
-        """
-        try:
-            # Obter a carteira
-            carteira = Carteira.query.get(carteira_id)
-            if not carteira:
-                return False
-            
-            # Criar a movimentação
-            movimentacao = Movimentacao(
-                carteira_id=carteira_id,
-                valor=valor,
-                justificativa=justificativa,
-                data=datetime.now(),
-                servico_id=servico_id
-            )
-            
-            # Atualizar o saldo da carteira
-            carteira.saldo += valor
-            
-            # Salvar no banco de dados
-            db.session.add(movimentacao)
-            db.session.commit()
-            
-            return True
-        except Exception as e:
-            print(f"Erro ao registrar movimentação: {e}")
-            db.session.rollback()
-            return False
+    """Classe de serviço para gerenciamento de carteiras financeiras."""
     
     @staticmethod
     def registrar_movimentacoes_servico(servico):
         """
-        Registra as movimentações financeiras de um serviço.
+        Registra as movimentações financeiras de um serviço concluído.
         
         Args:
-            servico: Instância do serviço
+            servico (Servico): Objeto do serviço concluído
             
         Returns:
             bool: True se as movimentações foram registradas com sucesso
         """
+        from app import db
+        from models_flask import Carteira, Movimentacao, ServicoPeca
+        
         try:
-            # Obter carteira do mecânico
-            carteira_mecanico = CarteiraService.obter_carteira_mecanico(servico.mecanico_id)
-            if not carteira_mecanico:
-                return False
-            
-            # Obter carteira da loja
-            carteira_loja = CarteiraService.obter_carteira_loja()
-            if not carteira_loja:
-                return False
+            # Obter peças do serviço
+            pecas = ServicoPeca.query.filter_by(servico_id=servico.id).all()
             
             # Calcular valores
-            valor_mecanico = (servico.valor_servico * servico.porcentagem_mecanico) / 100
-            valor_loja_servico = servico.valor_servico - valor_mecanico
+            valor_total_pecas = sum(p.preco_unitario * p.quantidade for p in pecas)
+            valor_servico = servico.valor_servico
+            porcentagem_mecanico = servico.porcentagem_mecanico
             
-            # Calcular valor das peças
-            from models_flask import ServicoPeca
-            pecas = ServicoPeca.query.filter_by(servico_id=servico.id).all()
-            valor_pecas = sum(p.preco_unitario * p.quantidade for p in pecas)
+            # Valor para o mecânico (apenas % da mão de obra)
+            valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
             
-            # Registrar movimentação para o mecânico (serviço)
+            # Valor total para a loja (peças + restante da mão de obra)
+            valor_loja = valor_total_pecas + (valor_servico - valor_mecanico)
+            
+            # Verificar se existem as carteiras
+            # 1. Carteira da loja
+            carteira_loja = Carteira.query.filter_by(tipo='loja').first()
+            if not carteira_loja:
+                carteira_loja = Carteira(tipo='loja', saldo=0.0)
+                db.session.add(carteira_loja)
+                db.session.commit()
+            
+            # 2. Carteira do mecânico
+            carteira_mecanico = Carteira.query.filter_by(
+                tipo='mecanico', 
+                mecanico_id=servico.mecanico_id
+            ).first()
+            
+            if not carteira_mecanico:
+                carteira_mecanico = Carteira(
+                    tipo='mecanico',
+                    mecanico_id=servico.mecanico_id,
+                    saldo=0.0
+                )
+                db.session.add(carteira_mecanico)
+                db.session.commit()
+            
+            # Registrar movimentação para o mecânico
             if valor_mecanico > 0:
-                CarteiraService.registrar_movimentacao(
-                    carteira_mecanico.id,
-                    valor_mecanico,
-                    f"Serviço #{servico.id} - {servico.porcentagem_mecanico}% do valor do serviço",
-                    servico.id
+                movimentacao_mecanico = Movimentacao(
+                    carteira_id=carteira_mecanico.id,
+                    valor=valor_mecanico,
+                    justificativa=f"Pagamento de serviço #{servico.id}",
+                    data=datetime.now(),
+                    servico_id=servico.id
                 )
+                db.session.add(movimentacao_mecanico)
+                
+                # Atualizar saldo do mecânico
+                carteira_mecanico.saldo += valor_mecanico
             
-            # Registrar movimentação para a loja (serviço)
-            if valor_loja_servico > 0:
-                CarteiraService.registrar_movimentacao(
-                    carteira_loja.id,
-                    valor_loja_servico,
-                    f"Serviço #{servico.id} - Valor do serviço (parte da loja)",
-                    servico.id
+            # Registrar movimentação para a loja
+            if valor_loja > 0:
+                movimentacao_loja = Movimentacao(
+                    carteira_id=carteira_loja.id,
+                    valor=valor_loja,
+                    justificativa=f"Recebimento de serviço #{servico.id} (peças + % serviço)",
+                    data=datetime.now(),
+                    servico_id=servico.id
                 )
+                db.session.add(movimentacao_loja)
+                
+                # Atualizar saldo da loja
+                carteira_loja.saldo += valor_loja
             
-            # Registrar movimentação para a loja (peças)
-            if valor_pecas > 0:
-                CarteiraService.registrar_movimentacao(
-                    carteira_loja.id,
-                    valor_pecas,
-                    f"Serviço #{servico.id} - Valor das peças",
-                    servico.id
-                )
-            
+            # Salvar todas as alterações
+            db.session.commit()
             return True
+            
         except Exception as e:
-            print(f"Erro ao registrar movimentações do serviço: {e}")
+            current_app.logger.error(f"Erro ao registrar movimentações: {str(e)}")
             db.session.rollback()
             return False

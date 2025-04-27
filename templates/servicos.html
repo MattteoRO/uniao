@@ -94,12 +94,49 @@
                         </td>
                         <td>
                             <div class="btn-group">
-                                <a href="#" class="btn btn-sm btn-outline-primary">Detalhes</a>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Detalhes
+                                </a>
                                 {% if servico.status == 'aberto' %}
-                                <button type="button" class="btn btn-sm btn-outline-success">Concluir</button>
-                                <button type="button" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                <button type="button" class="btn btn-sm btn-outline-success btn-concluir" 
+                                        data-id="{{ servico.id }}" data-cliente="{{ servico.cliente }}"
+                                        data-bs-toggle="modal" data-bs-target="#confirmaModal"
+                                        data-acao="concluir">
+                                    <i class="bi bi-check-circle"></i> Concluir
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-cancelar"
+                                        data-id="{{ servico.id }}" data-cliente="{{ servico.cliente }}"
+                                        data-bs-toggle="modal" data-bs-target="#confirmaModal"
+                                        data-acao="cancelar">
+                                    <i class="bi bi-x-circle"></i> Cancelar
+                                </button>
                                 {% endif %}
-                                <button type="button" class="btn btn-sm btn-outline-secondary">PDF</button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-file-pdf"></i> PDF
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item btn-pdf" href="#" 
+                                               data-id="{{ servico.id }}" data-tipo="cliente">
+                                               <i class="bi bi-person"></i> Cliente
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item btn-pdf" href="#" 
+                                               data-id="{{ servico.id }}" data-tipo="mecanico">
+                                               <i class="bi bi-wrench"></i> Mecânico
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item btn-pdf" href="#" 
+                                               data-id="{{ servico.id }}" data-tipo="loja">
+                                               <i class="bi bi-shop"></i> Loja
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -154,7 +191,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="porcentagem_mecanico" class="form-label">Porcentagem do Mecânico*</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" min="0" max="100" value="50" required>
+                                <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" min="0" max="100" value="80" required>
                                 <span class="input-group-text">%</span>
                             </div>
                         </div>
@@ -178,4 +215,112 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmaModal" tabindex="-1" aria-labelledby="confirmaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmaModalLabel">Confirmar Ação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmaTexto">Tem certeza que deseja realizar esta ação?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formAcao" method="POST">
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+    
+    // Configurar o modal de confirmação
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmaModal = document.getElementById('confirmaModal');
+        const confirmaTexto = document.getElementById('confirmaTexto');
+        const formAcao = document.getElementById('formAcao');
+        
+        // Botões de concluir
+        const botoesConcluir = document.querySelectorAll('.btn-concluir');
+        botoesConcluir.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const cliente = this.getAttribute('data-cliente');
+                
+                confirmaTexto.innerHTML = `Tem certeza que deseja <strong>concluir</strong> o serviço para o cliente <strong>${cliente}</strong>?<br><br>
+                                          Esta ação irá registrar movimentações financeiras nas carteiras.`;
+                formAcao.action = `/servicos/concluir/${id}`;
+            });
+        });
+        
+        // Botões de cancelar
+        const botoesCancelar = document.querySelectorAll('.btn-cancelar');
+        botoesCancelar.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const cliente = this.getAttribute('data-cliente');
+                
+                confirmaTexto.innerHTML = `Tem certeza que deseja <strong>cancelar</strong> o serviço para o cliente <strong>${cliente}</strong>?<br><br>
+                                          Esta ação não pode ser desfeita.`;
+                formAcao.action = `/servicos/cancelar/${id}`;
+            });
+        });
+        
+        // Botões de PDF
+        const botoesPDF = document.querySelectorAll('.btn-pdf');
+        botoesPDF.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const id = this.getAttribute('data-id');
+                const tipo = this.getAttribute('data-tipo');
+                
+                // Fazer requisição AJAX para gerar o PDF
+                fetch(`/servicos/gerar_pdf/${id}/${tipo}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Abrir o PDF em uma nova aba
+                            window.open(data.filepath, '_blank');
+                        } else {
+                            alert('Erro ao gerar o PDF. Por favor, tente novamente.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        alert('Erro ao gerar o PDF. Por favor, tente novamente.');
+                    });
+            });
+        });
+    });
+    
+    // Filtro de status
+    document.addEventListener('DOMContentLoaded', function() {
+        const filtroStatus = document.getElementById('filtroStatus');
+        
+        // Definir o valor selecionado com base na URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusParam = urlParams.get('status');
+        
+        if (statusParam) {
+            filtroStatus.value = statusParam;
+        }
+        
+        // Aplicar filtro ao mudar o select
+        filtroStatus.addEventListener('change', function() {
+            document.getElementById('filtroForm').submit();
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}

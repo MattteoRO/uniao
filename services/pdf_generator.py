@@ -1,416 +1,543 @@
 """
-Gerador de PDF
-Responsável por gerar os relatórios em PDF para cliente, mecânico e loja.
+Gerador de PDF para serviços
+Responsável por gerar PDF para cliente, mecânico e loja.
 """
 import os
-import datetime
+from datetime import datetime
+
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.units import mm, inch
+from reportlab.lib.pagesizes import letter, A4, mm
+from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 
 
 class PDFGenerator:
     """
-    Classe responsável por gerar os diferentes relatórios em PDF.
+    Classe para geração de PDF de serviços.
+    Gera três tipos de relatórios:
+    - Cliente: comprovante em tamanho 80mm x 200mm
+    - Mecânico: relatório com serviços e valores a receber
+    - Loja: relatório com serviços, peças e valores totais
     """
+    
     def __init__(self):
         """Inicializa o gerador de PDF."""
-        self.styles = getSampleStyleSheet()
-        self.title_style = ParagraphStyle(
-            name='TitleStyle',
-            parent=self.styles['Heading1'],
-            alignment=TA_CENTER,
-            fontSize=16,
-            spaceAfter=10*mm
-        )
-        self.normal_style = self.styles['Normal']
-        self.heading_style = self.styles['Heading2']
-        self.subtitle_style = ParagraphStyle(
-            name='SubtitleStyle',
-            parent=self.styles['Heading3'],
-            fontSize=12,
-            spaceAfter=6*mm
-        )
-        self.table_style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('BOX', (0, 0), (-1, -1), 1, colors.black),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ])
+        # Criar diretórios para armazenar PDFs se não existirem
+        self.cliente_dir = os.path.join(os.getcwd(), 'ser cliente')
+        self.mecanico_dir = os.path.join(os.getcwd(), 'ser mecanico')
+        self.loja_dir = os.path.join(os.getcwd(), 'ser loja')
         
-        # Verificar se as pastas de destino existem
-        for folder in ['ser cliente', 'ser mecanico', 'ser loja']:
-            if not os.path.exists(folder):
-                os.makedirs(folder)
+        os.makedirs(self.cliente_dir, exist_ok=True)
+        os.makedirs(self.mecanico_dir, exist_ok=True)
+        os.makedirs(self.loja_dir, exist_ok=True)
     
-    def _gerar_codigo_servico(self, nome_mecanico, id_servico):
+    def gerar_pdf_cliente(self, servico, config=None):
         """
-        Gera o código do serviço com base na primeira letra do nome do mecânico e ID.
-        
-        Args:
-            nome_mecanico (str): Nome do mecânico
-            id_servico (int): ID do serviço
-            
-        Returns:
-            str: Código do serviço no formato "X123" (primeira letra + ID)
-        """
-        if not nome_mecanico:
-            return f"S{id_servico}"
-            
-        primeira_letra = nome_mecanico[0].upper()
-        return f"{primeira_letra}{id_servico}"
-    
-    def gerar_pdf_cliente(self, servico, configuracoes, abrir_automaticamente=True):
-        """
-        Gera o relatório PDF para o cliente.
+        Gera PDF para o cliente (tamanho 80mm x 200mm).
         
         Args:
             servico (dict): Dados do serviço
-            configuracoes (dict): Configurações do sistema
-            abrir_automaticamente (bool): Se True, abre o PDF após gerar
+            config (dict, optional): Configurações da empresa
             
         Returns:
-            str: Caminho para o PDF gerado
+            str: Caminho para o arquivo PDF gerado
         """
-        # Dimensões do recibo: 80mm x 200mm
-        width = 80 * mm
-        height = 200 * mm
+        data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
+        if servico['id'] == 0:  # Preview antes de salvar
+            filepath = os.path.join(self.cliente_dir, f"preview_cliente.pdf")
+        else:
+            codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+            filepath = os.path.join(self.cliente_dir, f"servico_{codigo_servico}_cliente.pdf")
         
-        # Preparar dados
-        id_servico = servico.get('id', 0)
-        cliente = servico.get('cliente', 'Cliente')
-        telefone = servico.get('telefone', '')
-        descricao = servico.get('descricao', '')
-        mecanico = servico.get('mecanico_nome', 'Mecânico')
-        valor_servico = servico.get('valor_servico', 0)
-        valor_total_pecas = servico.get('valor_total_pecas', 0)
-        valor_total = valor_servico + valor_total_pecas
-        data = servico.get('data_criacao', datetime.datetime.now())
-        pecas = servico.get('pecas', [])
-        
-        # Gerar código do serviço
-        codigo_servico = self._gerar_codigo_servico(mecanico, id_servico)
-        
-        # Definir caminho do arquivo
-        now = datetime.datetime.now()
-        filename = f"cliente_{cliente.replace(' ', '_')}_{codigo_servico}_{now.strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join('ser cliente', filename)
+        # Definir tamanho do papel: 80mm x 200mm
+        pagesize = (80 * mm, 200 * mm)
         
         # Criar documento
-        doc = SimpleDocTemplate(filepath, pagesize=(width, height), 
-                               rightMargin=5*mm, leftMargin=5*mm,
-                               topMargin=5*mm, bottomMargin=5*mm)
+        doc = SimpleDocTemplate(
+            filepath,
+            pagesize=pagesize,
+            rightMargin=5*mm,
+            leftMargin=5*mm,
+            topMargin=5*mm,
+            bottomMargin=5*mm
+        )
         
-        # Conteúdo
+        # Estilos
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name='Center',
+            alignment=TA_CENTER,
+            fontSize=9,
+        ))
+        styles.add(ParagraphStyle(
+            name='CenterBold',
+            parent=styles['Center'],
+            fontName='Helvetica-Bold'
+        ))
+        styles.add(ParagraphStyle(
+            name='Right',
+            alignment=TA_RIGHT,
+            fontSize=8,
+        ))
+        styles.add(ParagraphStyle(
+            name='SmallNormal',
+            parent=styles['Normal'],
+            fontSize=7,
+        ))
+        
+        # Conteúdo do documento
         elements = []
         
-        # Título
-        empresa = configuracoes.get('nome_empresa', 'Monark Motopeças e Bicicletaria')
-        title = Paragraph(f"<b>{empresa}</b>", self.title_style)
-        elements.append(title)
+        # Cabeçalho com informações da empresa
+        if config:
+            elements.append(Paragraph(f"<b>{config.get('nome_empresa', 'Monark Motopeças')}</b>", styles["CenterBold"]))
+            if config.get('endereco'):
+                elements.append(Paragraph(f"{config.get('endereco')}", styles["Center"]))
+            if config.get('telefone'):
+                elements.append(Paragraph(f"Tel: {config.get('telefone')}", styles["Center"]))
+        else:
+            elements.append(Paragraph("<b>Monark Motopeças e Bicicletaria</b>", styles["CenterBold"]))
         
-        # Subtítulo
-        subtitle = Paragraph(f"<b>AUTORIZAÇÃO DE SERVIÇO {codigo_servico}</b>", self.subtitle_style)
-        elements.append(subtitle)
+        elements.append(Spacer(1, 5*mm))
         
-        # Dados do cliente e serviço
-        data_text = f"<b>Cliente:</b> {cliente}<br/>"
-        if telefone:
-            data_text += f"<b>Telefone:</b> {telefone}<br/>"
-        data_text += f"<b>Mecânico:</b> {mecanico}<br/>"
-        data_text += f"<b>Data:</b> {data.strftime('%d/%m/%Y')}<br/>"
-        data_text += f"<b>Descrição:</b> {descricao}<br/>"
+        # Informações do serviço
+        codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+        if servico['id'] == 0:  # Preview
+            codigo_servico = "PREVIEW"
+            
+        elements.append(Paragraph(f"<b>SERVIÇO: {codigo_servico}</b>", styles["CenterBold"]))
+        elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
+        elements.append(Spacer(1, 3*mm))
         
-        p_data = Paragraph(data_text, self.normal_style)
-        elements.append(p_data)
-        elements.append(Spacer(1, 10))
-        
-        # Tabela de valores
+        # Dados do cliente
         data = [
-            ["Descrição", "Valor (R$)"],
-            ["Mão de obra", f"{valor_servico:.2f}".replace('.', ',')],
-            ["Peças", f"{valor_total_pecas:.2f}".replace('.', ',')],
-            ["Total", f"{valor_total:.2f}".replace('.', ',')],
+            ["CLIENTE:", servico['cliente']],
+            ["TELEFONE:", servico['telefone']],
+            ["MECÂNICO:", servico['mecanico_nome']],
         ]
         
-        t = Table(data, colWidths=[width*0.6, width*0.3])
-        t.setStyle(self.table_style)
+        t = Table(data, colWidths=[20*mm, 50*mm])
+        t.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
         elements.append(t)
-        elements.append(Spacer(1, 10))
+        
+        elements.append(Spacer(1, 3*mm))
+        
+        # Descrição do serviço
+        elements.append(Paragraph("<b>DESCRIÇÃO:</b>", styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
+        
+        elements.append(Spacer(1, 3*mm))
         
         # Tabela de peças
-        if pecas:
-            elements.append(Paragraph("<b>Peças utilizadas:</b>", self.subtitle_style))
+        if servico['pecas'] and len(servico['pecas']) > 0:
+            elements.append(Paragraph("<b>PEÇAS UTILIZADAS:</b>", styles["SmallNormal"]))
             
-            pecas_data = [["Descrição", "Qtd", "Valor (R$)"]]
-            for peca in pecas:
-                descricao_peca = peca.get('descricao', 'Peça')
-                quantidade = peca.get('quantidade', 1)
-                preco = peca.get('preco_unitario', 0) * quantidade
-                pecas_data.append([
-                    descricao_peca,
-                    str(quantidade),
-                    f"{preco:.2f}".replace('.', ','),
-                ])
+            # Cabeçalho da tabela
+            data = [
+                ["Qtd", "Descrição", "Unitário", "Total"]
+            ]
+            
+            # Adicionar linhas de peças
+            for peca in servico['pecas']:
+                valor_unitario = float(peca.get('preco_unitario', 0))
+                quantidade = int(peca.get('quantidade', 0))
+                total = valor_unitario * quantidade
                 
-            t2 = Table(pecas_data, colWidths=[width*0.5, width*0.15, width*0.25])
-            t2.setStyle(self.table_style)
-            elements.append(t2)
-        
-        # Assinaturas
-        elements.append(Spacer(1, 15*mm))
-        assinatura = "_" * 20
-        elements.append(Paragraph(f"{assinatura}<br/>Cliente", self.normal_style))
-        
-        # Gerar PDF
-        doc.build(elements)
-        
-        # Se solicitado, abrir o PDF automaticamente
-        if abrir_automaticamente:
-            self._abrir_pdf(filepath)
+                data.append([
+                    str(quantidade),
+                    peca.get('descricao', 'N/A'),
+                    f"R$ {valor_unitario:.2f}".replace('.', ','),
+                    f"R$ {total:.2f}".replace('.', ',')
+                ])
             
-        return filepath
-    
-    def gerar_pdf_mecanico(self, servico, configuracoes, abrir_automaticamente=True):
-        """
-        Gera o relatório PDF para o mecânico.
-        
-        Args:
-            servico (dict): Dados do serviço
-            configuracoes (dict): Configurações do sistema
-            abrir_automaticamente (bool): Se True, abre o PDF após gerar
+            # Adicionar linha de total
+            data.append([
+                "",
+                "",
+                "<b>TOTAL PEÇAS:</b>",
+                f"<b>R$ {servico['valor_total_pecas']:.2f}</b>".replace('.', ',')
+            ])
             
-        Returns:
-            str: Caminho para o PDF gerado
-        """
-        # Dimensões A4
-        width, height = A4
-        
-        # Preparar dados
-        id_servico = servico.get('id', 0)
-        cliente = servico.get('cliente', 'Cliente')
-        descricao = servico.get('descricao', '')
-        mecanico = servico.get('mecanico_nome', 'Mecânico')
-        mecanico_id = servico.get('mecanico_id', 0)
-        valor_servico = servico.get('valor_servico', 0)
-        porcentagem_mecanico = servico.get('porcentagem_mecanico', 80)
-        valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
-        data = servico.get('data_criacao', datetime.datetime.now())
-        
-        # Gerar código do serviço
-        codigo_servico = self._gerar_codigo_servico(mecanico, id_servico)
-        
-        # Definir caminho do arquivo
-        now = datetime.datetime.now()
-        filename = f"mecanico_{mecanico.replace(' ', '_')}_{codigo_servico}_{now.strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join('ser mecanico', filename)
-        
-        # Criar documento
-        doc = SimpleDocTemplate(filepath, pagesize=A4, 
-                               rightMargin=15*mm, leftMargin=15*mm,
-                               topMargin=15*mm, bottomMargin=15*mm)
-        
-        # Conteúdo
-        elements = []
-        
-        # Título
-        empresa = configuracoes.get('nome_empresa', 'Monark Motopeças e Bicicletaria')
-        title = Paragraph(f"<b>{empresa}</b>", self.title_style)
-        elements.append(title)
-        
-        # Subtítulo
-        subtitle = Paragraph(f"<b>RELATÓRIO DE SERVIÇO - MECÂNICO</b>", self.subtitle_style)
-        elements.append(subtitle)
-        
-        # Dados do mecânico
-        data_text = f"<b>Mecânico:</b> {mecanico}<br/>"
-        data_text += f"<b>Data:</b> {data.strftime('%d/%m/%Y')}<br/>"
-        data_text += f"<b>Código do Serviço:</b> {codigo_servico}<br/>"
-        
-        p_data = Paragraph(data_text, self.normal_style)
-        elements.append(p_data)
-        elements.append(Spacer(1, 10))
-        
-        # Detalhes do serviço
-        elements.append(Paragraph("<b>Detalhes do Serviço</b>", self.subtitle_style))
-        
-        detail_text = f"<b>Cliente:</b> {cliente}<br/>"
-        detail_text += f"<b>Descrição:</b> {descricao}<br/>"
-        detail_text += f"<b>Valor do Serviço:</b> R$ {valor_servico:.2f}".replace('.', ',') + "<br/>"
-        detail_text += f"<b>Porcentagem do Mecânico:</b> {porcentagem_mecanico}%<br/>"
-        detail_text += f"<b>Valor para o Mecânico:</b> R$ {valor_mecanico:.2f}".replace('.', ',') + "<br/>"
-        
-        p_detail = Paragraph(detail_text, self.normal_style)
-        elements.append(p_detail)
-        elements.append(Spacer(1, 20))
-        
-        # Assinaturas
-        elements.append(Spacer(1, 15*mm))
-        assinatura = "_" * 20
-        elements.append(Paragraph(f"{assinatura}<br/>Mecânico", self.normal_style))
-        elements.append(Spacer(1, 10*mm))
-        elements.append(Paragraph(f"{assinatura}<br/>Responsável Loja", self.normal_style))
-        
-        # Gerar PDF
-        doc.build(elements)
-        
-        # Se solicitado, abrir o PDF automaticamente
-        if abrir_automaticamente:
-            self._abrir_pdf(filepath)
+            # Criar tabela
+            t = Table(data, colWidths=[7*mm, 31*mm, 15*mm, 17*mm])
+            t.setStyle(TableStyle([
+                ('FONTSIZE', (0, 0), (-1, -1), 7),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('GRID', (0, 0), (-1, 0), 0.5, colors.black),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (2, 1), (3, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
+            ]))
+            elements.append(t)
             
-        return filepath
-    
-    def gerar_pdf_loja(self, servico, configuracoes, abrir_automaticamente=True):
-        """
-        Gera o relatório PDF para a loja.
+            elements.append(Spacer(1, 3*mm))
         
-        Args:
-            servico (dict): Dados do serviço
-            configuracoes (dict): Configurações do sistema
-            abrir_automaticamente (bool): Se True, abre o PDF após gerar
-            
-        Returns:
-            str: Caminho para o PDF gerado
-        """
-        # Dimensões A4
-        width, height = A4
-        
-        # Preparar dados
-        id_servico = servico.get('id', 0)
-        cliente = servico.get('cliente', 'Cliente')
-        descricao = servico.get('descricao', '')
-        mecanico = servico.get('mecanico_nome', 'Mecânico')
-        mecanico_id = servico.get('mecanico_id', 0)
-        valor_servico = servico.get('valor_servico', 0)
-        porcentagem_mecanico = servico.get('porcentagem_mecanico', 80)
-        valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
-        valor_loja_servico = valor_servico - valor_mecanico
-        valor_total_pecas = servico.get('valor_total_pecas', 0)
+        # Valor do serviço e total
+        valor_servico = float(servico.get('valor_servico', 0))
+        valor_total_pecas = float(servico.get('valor_total_pecas', 0))
         valor_total = valor_servico + valor_total_pecas
-        data = servico.get('data_criacao', datetime.datetime.now())
-        pecas = servico.get('pecas', [])
         
-        # Gerar código do serviço
-        codigo_servico = self._gerar_codigo_servico(mecanico, id_servico)
+        data = [
+            ["MÃO DE OBRA:", f"R$ {valor_servico:.2f}".replace('.', ',')],
+            ["PEÇAS:", f"R$ {valor_total_pecas:.2f}".replace('.', ',')],
+            ["TOTAL:", f"R$ {valor_total:.2f}".replace('.', ',')],
+        ]
         
-        # Definir caminho do arquivo
-        now = datetime.datetime.now()
-        filename = f"loja_{codigo_servico}_{now.strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join('ser loja', filename)
+        t = Table(data, colWidths=[40*mm, 30*mm])
+        t.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 9),
+        ]))
+        elements.append(t)
         
-        # Criar documento
-        doc = SimpleDocTemplate(filepath, pagesize=A4, 
-                               rightMargin=15*mm, leftMargin=15*mm,
-                               topMargin=15*mm, bottomMargin=15*mm)
+        elements.append(Spacer(1, 5*mm))
         
-        # Conteúdo
+        # Assinaturas
+        elements.append(Paragraph("<b>AUTORIZAÇÃO DE SERVIÇO</b>", styles["Center"]))
+        elements.append(Spacer(1, 10*mm))
+        
+        data = [
+            ["_______________________", "_______________________"],
+            ["Cliente", "Mecânico"],
+        ]
+        
+        t = Table(data, colWidths=[35*mm, 35*mm])
+        t.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t)
+        
+        # Rodapé
+        elements.append(Spacer(1, 5*mm))
+        elements.append(Paragraph("Obrigado pela preferência!", styles["Center"]))
+        
+        # Construir o documento
+        doc.build(elements)
+        
+        return filepath
+    
+    def gerar_pdf_mecanico(self, servico, config=None):
+        """
+        Gera PDF para o mecânico (tamanho A4).
+        
+        Args:
+            servico (dict): Dados do serviço
+            config (dict, optional): Configurações da empresa
+            
+        Returns:
+            str: Caminho para o arquivo PDF gerado
+        """
+        data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
+        if servico['id'] == 0:  # Preview antes de salvar
+            filepath = os.path.join(self.mecanico_dir, f"preview_mecanico.pdf")
+        else:
+            codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+            filepath = os.path.join(self.mecanico_dir, f"servico_{codigo_servico}_mecanico.pdf")
+        
+        # Criar documento tamanho A4
+        doc = SimpleDocTemplate(
+            filepath,
+            pagesize=A4,
+            rightMargin=20*mm,
+            leftMargin=20*mm,
+            topMargin=20*mm,
+            bottomMargin=20*mm
+        )
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name='Center',
+            alignment=TA_CENTER,
+        ))
+        styles.add(ParagraphStyle(
+            name='Title',
+            parent=styles['Heading1'],
+            alignment=TA_CENTER,
+        ))
+        styles.add(ParagraphStyle(
+            name='Right',
+            alignment=TA_RIGHT,
+        ))
+        
+        # Conteúdo do documento
         elements = []
         
-        # Título
-        empresa = configuracoes.get('nome_empresa', 'Monark Motopeças e Bicicletaria')
-        title = Paragraph(f"<b>{empresa}</b>", self.title_style)
-        elements.append(title)
+        # Cabeçalho com informações da empresa
+        if config:
+            elements.append(Paragraph(f"<b>{config.get('nome_empresa', 'Monark Motopeças')}</b>", styles["Title"]))
+            if config.get('endereco'):
+                elements.append(Paragraph(f"{config.get('endereco')}", styles["Center"]))
+            if config.get('telefone'):
+                elements.append(Paragraph(f"Tel: {config.get('telefone')}", styles["Center"]))
+        else:
+            elements.append(Paragraph("<b>Monark Motopeças e Bicicletaria</b>", styles["Title"]))
         
-        # Subtítulo
-        subtitle = Paragraph(f"<b>RELATÓRIO DE SERVIÇO - LOJA</b>", self.subtitle_style)
-        elements.append(subtitle)
+        elements.append(Spacer(1, 10*mm))
+        
+        # Título do documento
+        codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+        if servico['id'] == 0:  # Preview
+            codigo_servico = "PREVIEW"
+            
+        elements.append(Paragraph(f"<b>RELATÓRIO DE SERVIÇO PARA MECÂNICO - {codigo_servico}</b>", styles["Title"]))
+        elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
+        
+        elements.append(Spacer(1, 10*mm))
         
         # Dados do serviço
-        data_text = f"<b>Código do Serviço:</b> {codigo_servico}<br/>"
-        data_text += f"<b>Data:</b> {data.strftime('%d/%m/%Y')}<br/>"
-        data_text += f"<b>Cliente:</b> {cliente}<br/>"
-        data_text += f"<b>Mecânico:</b> {mecanico}<br/>"
-        data_text += f"<b>Descrição:</b> {descricao}<br/>"
-        
-        p_data = Paragraph(data_text, self.normal_style)
-        elements.append(p_data)
-        elements.append(Spacer(1, 10))
-        
-        # Resumo financeiro
-        elements.append(Paragraph("<b>Resumo Financeiro</b>", self.subtitle_style))
-        
-        # Tabela de resumo
-        resumo_data = [
-            ["Descrição", "Valor (R$)"],
-            ["Valor do Serviço (Mão de obra)", f"{valor_servico:.2f}".replace('.', ',')],
-            ["Valor das Peças", f"{valor_total_pecas:.2f}".replace('.', ',')],
-            ["Valor Total do Serviço", f"{valor_total:.2f}".replace('.', ',')],
-            ["Porcentagem do Mecânico", f"{porcentagem_mecanico}%"],
-            ["Valor para o Mecânico", f"{valor_mecanico:.2f}".replace('.', ',')],
-            ["Valor para a Loja (Mão de obra)", f"{valor_loja_servico:.2f}".replace('.', ',')],
-            ["Valor para a Loja (Peças)", f"{valor_total_pecas:.2f}".replace('.', ',')],
-            ["Valor Total para a Loja", f"{(valor_loja_servico + valor_total_pecas):.2f}".replace('.', ',')],
+        data = [
+            ["Mecânico:", servico['mecanico_nome']],
+            ["Cliente:", servico['cliente']],
+            ["Telefone:", servico['telefone']],
+            ["Data:", data_atual],
         ]
         
-        t = Table(resumo_data, colWidths=[width*0.6, width*0.2])
-        t.setStyle(self.table_style)
+        t = Table(data, colWidths=[50*mm, 100*mm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
         elements.append(t)
-        elements.append(Spacer(1, 10))
         
-        # Tabela de peças
-        if pecas:
-            elements.append(Paragraph("<b>Peças utilizadas:</b>", self.subtitle_style))
-            
-            pecas_data = [["ID", "Descrição", "Qtd", "Preço Unit. (R$)", "Total (R$)"]]
-            for peca in pecas:
-                peca_id = peca.get('peca_id', '')
-                descricao_peca = peca.get('descricao', 'Peça')
-                quantidade = peca.get('quantidade', 1)
-                preco_unitario = peca.get('preco_unitario', 0)
-                preco_total = preco_unitario * quantidade
-                pecas_data.append([
-                    peca_id,
-                    descricao_peca,
-                    str(quantidade),
-                    f"{preco_unitario:.2f}".replace('.', ','),
-                    f"{preco_total:.2f}".replace('.', ','),
-                ])
-                
-            t2 = Table(pecas_data, colWidths=[width*0.1, width*0.4, width*0.1, width*0.15, width*0.15])
-            t2.setStyle(self.table_style)
-            elements.append(t2)
+        elements.append(Spacer(1, 5*mm))
+        
+        # Descrição do serviço
+        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["Normal"]))
+        elements.append(Paragraph(servico['descricao'], styles["Normal"]))
+        
+        elements.append(Spacer(1, 5*mm))
+        
+        # Cálculo de valores
+        valor_servico = float(servico.get('valor_servico', 0))
+        porcentagem = servico.get('porcentagem_mecanico', 80)
+        valor_mecanico = (valor_servico * porcentagem) / 100
+        
+        # Resumo de valores
+        data = [
+            ["Valor do Serviço:", f"R$ {valor_servico:.2f}".replace('.', ',')],
+            ["Porcentagem do Mecânico:", f"{porcentagem}%"],
+            ["Valor a Receber:", f"R$ {valor_mecanico:.2f}".replace('.', ',')],
+        ]
+        
+        t = Table(data, colWidths=[100*mm, 50*mm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(t)
+        
+        elements.append(Spacer(1, 20*mm))
         
         # Assinaturas
-        elements.append(Spacer(1, 15*mm))
-        assinatura = "_" * 20
-        elements.append(Paragraph(f"{assinatura}<br/>Responsável Loja", self.normal_style))
+        data = [
+            ["_______________________", "_______________________"],
+            ["Mecânico", "Responsável"],
+        ]
         
-        # Gerar PDF
+        t = Table(data, colWidths=[75*mm, 75*mm])
+        t.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t)
+        
+        # Construir o documento
         doc.build(elements)
         
-        # Se solicitado, abrir o PDF automaticamente
-        if abrir_automaticamente:
-            self._abrir_pdf(filepath)
-            
         return filepath
     
-    def _abrir_pdf(self, filepath):
+    def gerar_pdf_loja(self, servico, config=None):
         """
-        Abre o PDF gerado.
+        Gera PDF para a loja (tamanho A4).
         
         Args:
-            filepath (str): Caminho para o arquivo PDF
+            servico (dict): Dados do serviço
+            config (dict, optional): Configurações da empresa
+            
+        Returns:
+            str: Caminho para o arquivo PDF gerado
         """
-        try:
-            import os
-            import platform
-            if platform.system() == 'Darwin':  # macOS
-                os.system(f'open "{filepath}"')
-            elif platform.system() == 'Windows':  # Windows
-                os.system(f'start "" "{filepath}"')
-            else:  # Linux e outros
-                os.system(f'xdg-open "{filepath}"')
-        except Exception as e:
-            print(f"Erro ao abrir o PDF: {e}")
+        data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
+        if servico['id'] == 0:  # Preview antes de salvar
+            filepath = os.path.join(self.loja_dir, f"preview_loja.pdf")
+        else:
+            codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+            filepath = os.path.join(self.loja_dir, f"servico_{codigo_servico}_loja.pdf")
+        
+        # Criar documento tamanho A4
+        doc = SimpleDocTemplate(
+            filepath,
+            pagesize=A4,
+            rightMargin=20*mm,
+            leftMargin=20*mm,
+            topMargin=20*mm,
+            bottomMargin=20*mm
+        )
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name='Center',
+            alignment=TA_CENTER,
+        ))
+        styles.add(ParagraphStyle(
+            name='Title',
+            parent=styles['Heading1'],
+            alignment=TA_CENTER,
+        ))
+        styles.add(ParagraphStyle(
+            name='Right',
+            alignment=TA_RIGHT,
+        ))
+        
+        # Conteúdo do documento
+        elements = []
+        
+        # Cabeçalho com informações da empresa
+        if config:
+            elements.append(Paragraph(f"<b>{config.get('nome_empresa', 'Monark Motopeças')}</b>", styles["Title"]))
+            if config.get('endereco'):
+                elements.append(Paragraph(f"{config.get('endereco')}", styles["Center"]))
+            if config.get('telefone'):
+                elements.append(Paragraph(f"Tel: {config.get('telefone')}", styles["Center"]))
+        else:
+            elements.append(Paragraph("<b>Monark Motopeças e Bicicletaria</b>", styles["Title"]))
+        
+        elements.append(Spacer(1, 10*mm))
+        
+        # Título do documento
+        codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
+        if servico['id'] == 0:  # Preview
+            codigo_servico = "PREVIEW"
+            
+        elements.append(Paragraph(f"<b>RELATÓRIO FINANCEIRO - SERVIÇO {codigo_servico}</b>", styles["Title"]))
+        elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
+        
+        elements.append(Spacer(1, 10*mm))
+        
+        # Dados do serviço
+        data = [
+            ["Serviço:", codigo_servico],
+            ["Mecânico:", servico['mecanico_nome']],
+            ["Cliente:", servico['cliente']],
+            ["Telefone:", servico['telefone']],
+            ["Data:", data_atual],
+        ]
+        
+        t = Table(data, colWidths=[50*mm, 100*mm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(t)
+        
+        elements.append(Spacer(1, 5*mm))
+        
+        # Descrição do serviço
+        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["Normal"]))
+        elements.append(Paragraph(servico['descricao'], styles["Normal"]))
+        
+        elements.append(Spacer(1, 5*mm))
+        
+        # Tabela de peças
+        if servico['pecas'] and len(servico['pecas']) > 0:
+            elements.append(Paragraph("<b>Peças Utilizadas:</b>", styles["Normal"]))
+            
+            # Cabeçalho da tabela
+            data = [
+                ["ID", "Descrição", "Preço Unit.", "Qtd", "Total"]
+            ]
+            
+            # Adicionar linhas de peças
+            for peca in servico['pecas']:
+                valor_unitario = float(peca.get('preco_unitario', 0))
+                quantidade = int(peca.get('quantidade', 0))
+                total = valor_unitario * quantidade
+                
+                data.append([
+                    peca.get('peca_id', ''),
+                    peca.get('descricao', 'N/A'),
+                    f"R$ {valor_unitario:.2f}".replace('.', ','),
+                    str(quantidade),
+                    f"R$ {total:.2f}".replace('.', ',')
+                ])
+            
+            # Adicionar linha de total
+            data.append([
+                "",
+                "",
+                "",
+                "<b>TOTAL:</b>",
+                f"<b>R$ {servico['valor_total_pecas']:.2f}</b>".replace('.', ',')
+            ])
+            
+            # Criar tabela
+            t = Table(data, colWidths=[20*mm, 80*mm, 25*mm, 15*mm, 25*mm])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('GRID', (0, 0), (-1, 0), 0.5, colors.black),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (2, 1), (4, -1), 'RIGHT'),
+                ('ALIGN', (3, 1), (3, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
+            ]))
+            elements.append(t)
+            
+            elements.append(Spacer(1, 5*mm))
+        
+        # Cálculo de valores
+        valor_servico = float(servico.get('valor_servico', 0))
+        valor_total_pecas = float(servico.get('valor_total_pecas', 0))
+        porcentagem = servico.get('porcentagem_mecanico', 80)
+        valor_mecanico = (valor_servico * porcentagem) / 100
+        valor_loja_servico = valor_servico - valor_mecanico
+        valor_loja_total = valor_loja_servico + valor_total_pecas
+        
+        # Resumo financeiro
+        elements.append(Paragraph("<b>Resumo Financeiro:</b>", styles["Normal"]))
+        
+        data = [
+            ["Valor do Serviço:", f"R$ {valor_servico:.2f}".replace('.', ',')],
+            ["Porcentagem do Mecânico:", f"{porcentagem}%"],
+            ["Valor pago ao Mecânico:", f"R$ {valor_mecanico:.2f}".replace('.', ',')],
+            ["Valor do Serviço para a Loja:", f"R$ {valor_loja_servico:.2f}".replace('.', ',')],
+            ["Valor das Peças:", f"R$ {valor_total_pecas:.2f}".replace('.', ',')],
+            ["Valor Total para a Loja:", f"R$ {valor_loja_total:.2f}".replace('.', ',')],
+        ]
+        
+        t = Table(data, colWidths=[100*mm, 50*mm])
+        t.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(t)
+        
+        # Construir o documento
+        doc.build(elements)
+        
+        return filepath

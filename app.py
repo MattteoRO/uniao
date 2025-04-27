@@ -144,12 +144,26 @@ def servicos():
     from models_flask import Servico, Mecanico
     from datetime import datetime
     
-    servicos = Servico.query.all()
+    # Obter filtros da query string
+    status_filter = request.args.get('status', 'todos')
+    
+    # Aplicar filtros
+    query = Servico.query
+    
+    if status_filter != 'todos':
+        query = query.filter_by(status=status_filter)
+    
+    # Ordenar por data de criação (mais recentes primeiro)
+    servicos = query.order_by(Servico.data_criacao.desc()).all()
+    
+    # Obter mecânicos ativos para filtros
     mecanicos = Mecanico.query.filter_by(ativo=True).all()
+    
     return render_template('servicos.html', 
-                          servicos=servicos, 
-                          mecanicos=mecanicos,
-                          now=datetime.now())
+                         servicos=servicos, 
+                         mecanicos=mecanicos,
+                         status_atual=status_filter,
+                         now=datetime.now())
 
 
 @app.route('/servicos/novo', methods=['GET', 'POST'])
@@ -239,6 +253,46 @@ def buscar_pecas():
     
     return jsonify(pecas)
 
+
+@app.route('/servicos/concluir/<int:servico_id>', methods=['POST'])
+def concluir_servico(servico_id):
+    from models_flask import Servico
+    from services.carteira_service import CarteiraService
+    
+    servico = Servico.query.get_or_404(servico_id)
+    
+    if servico.status != 'aberto':
+        flash(f'Este serviço não pode ser concluído pois não está aberto.', 'danger')
+        return redirect(url_for('servicos'))
+    
+    # Atualizar status
+    servico.status = 'concluido'
+    db.session.commit()
+    
+    # Registrar movimentações
+    if CarteiraService.registrar_movimentacoes_servico(servico):
+        flash(f'Serviço concluído com sucesso e movimentações financeiras registradas!', 'success')
+    else:
+        flash(f'Serviço concluído, mas houve um erro ao registrar movimentações financeiras.', 'warning')
+    
+    return redirect(url_for('servicos'))
+
+@app.route('/servicos/cancelar/<int:servico_id>', methods=['POST'])
+def cancelar_servico(servico_id):
+    from models_flask import Servico
+    
+    servico = Servico.query.get_or_404(servico_id)
+    
+    if servico.status != 'aberto':
+        flash(f'Este serviço não pode ser cancelado pois não está aberto.', 'danger')
+        return redirect(url_for('servicos'))
+    
+    # Atualizar status
+    servico.status = 'cancelado'
+    db.session.commit()
+    
+    flash(f'Serviço cancelado com sucesso!', 'success')
+    return redirect(url_for('servicos'))
 
 @app.route('/servicos/gerar_pdf/<int:servico_id>/<tipo>', methods=['GET', 'POST'])
 def gerar_pdf_servico(servico_id, tipo):

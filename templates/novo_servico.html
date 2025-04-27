@@ -61,13 +61,16 @@
             <h5 class="mb-3">Peças Utilizadas</h5>
             
             <div class="row mb-3">
-                <div class="col-md-8">
+                <div class="col-12">
                     <label for="busca_peca" class="form-label">Buscar Peça (Digite ID, código de barras ou descrição)</label>
-                    <input type="text" class="form-control" id="busca_peca" placeholder="Digite para buscar...">
-                </div>
-                <div class="col-md-4">
-                    <label for="codigo_barras" class="form-label">Código de Barras</label>
-                    <input type="text" class="form-control" id="codigo_barras" placeholder="Escaneie o código...">
+                    <input type="text" class="form-control" id="busca_peca" placeholder="Digite ID, código de barras ou parte da descrição..." autofocus>
+                    <small class="form-text text-muted">
+                        <ul class="mb-0 ps-3 mt-1">
+                            <li>Para buscar por <strong>ID</strong>: digite até 6 dígitos (ex: 1, 42)</li>
+                            <li>Para buscar por <strong>descrição</strong>: digite letras ou texto (ex: RODA, BIC)</li>
+                            <li>Para buscar por <strong>código de barras</strong>: digite números com 8 ou mais dígitos</li>
+                        </ul>
+                    </small>
                 </div>
             </div>
             
@@ -260,26 +263,37 @@
         // Limpar timeout anterior
         clearTimeout(timeoutId);
         
-        // Só buscar se tiver pelo menos 3 caracteres
-        if (termo.length < 3) {
+        // Limpar resultados se o campo estiver vazio
+        if (termo.length === 0) {
             document.getElementById('resultados_busca').style.display = 'none';
             return;
         }
         
-        // Definir timeout para evitar muitas requisições
+        // Busca imediata para ID numérico exato (até 6 dígitos) ou código de barras (8+ dígitos)
+        if ((/^\d{1,6}$/.test(termo)) || (/^\d{8,}$/.test(termo))) {
+            buscarPecas(termo);
+            return;
+        }
+        
+        // Para busca por descrição, aguardar pelo menos 2 caracteres
+        if (termo.length < 2) {
+            document.getElementById('resultados_busca').style.display = 'none';
+            return;
+        }
+        
+        // Definir timeout para evitar muitas requisições (apenas para busca por descrição)
         timeoutId = setTimeout(() => {
             buscarPecas(termo);
-        }, 500);
+        }, 300); // Reduzido para 300ms para resposta mais rápida
     });
     
-    // Buscar peça por código de barras
-    document.getElementById('codigo_barras').addEventListener('keypress', function(e) {
+    // Também realizar busca quando o usuário pressionar Enter
+    document.getElementById('busca_peca').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const codigo = this.value.trim();
-            if (codigo) {
-                buscarPecas(codigo);
-                this.value = '';
+            const termo = this.value.trim();
+            if (termo) {
+                buscarPecas(termo);
             }
         }
     });
