@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Cultural Brain Training - Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="card mb-4 bg-dark border-primary">
+            <div class="card-body">
+                <h1 class="card-title display-4 mb-4">Cultural Brain Training</h1>
+                <p class="lead">Test your knowledge of world cultures with friends and family!</p>
+                <div class="d-grid gap-2 col-8 mx-auto mt-4">
+                    <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-lg">Start New Game</a>
+                    <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary btn-lg">View Leaderboard</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">Learn</h3>
+                        <p class="card-text">Explore cultures from around the world through fun and challenging questions.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">Compete</h3>
+                        <p class="card-text">Challenge your friends to see who knows the most about global cultural traditions.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 bg-dark">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">Explore</h3>
+                        <p class="card-text">Discover fascinating facts about art, food, history, and traditions worldwide.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-5">
+            <h2>Featured Categories</h2>
+            <div class="row mt-3">
+                {% set categories = [
+                    {'name': 'Geography', 'icon': '🌏', 'desc': 'Natural wonders and landmarks'},
+                    {'name': 'History', 'icon': '📜', 'desc': 'Important events and historical figures'},
+                    {'name': 'Art', 'icon': '🎨', 'desc': 'Traditional arts and crafts'},
+                    {'name': 'Food', 'icon': '🍲', 'desc': 'Cuisines and cooking traditions'},
+                    {'name': 'Traditions', 'icon': '🎭', 'desc': 'Festivals and cultural practices'}
+                ] %}
+                
+                {% for category in categories %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 bg-dark">
+                        <div class="card-body">
+                            <h4 class="card-title">{{ category.icon }} {{ category.name }}</h4>
+                            <p class="card-text">{{ category.desc }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
