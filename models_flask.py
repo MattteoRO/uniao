@@ -95,11 +95,14 @@ class Servico(db.Model):
     
     @property
     def valor_mecanico(self):
-        return self.valor_servico * (self.porcentagem_mecanico / 100)
+        # O mecânico recebe a porcentagem APENAS sobre o valor do serviço (mão de obra)
+        # Sempre fixado em 80% da mão de obra
+        return self.valor_servico * 0.8
     
     @property
     def valor_loja(self):
-        return self.valor_total - self.valor_mecanico
+        # A loja recebe 20% do valor do serviço (mão de obra) + 100% do valor das peças
+        return (self.valor_servico * 0.2) + self.valor_total_pecas
 
 class Configuracao(db.Model):
     __tablename__ = 'configuracoes'

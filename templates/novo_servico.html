@@ -47,9 +47,10 @@
                 <div class="col-md-4 mb-3">
                     <label for="porcentagem_mecanico" class="form-label">Porcentagem do Mecânico*</label>
                     <div class="input-group">
-                        <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" value="{{ porcentagem_padrao }}" min="0" max="100" required>
+                        <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" value="80" min="0" max="100" readonly>
                         <span class="input-group-text">%</span>
                     </div>
+                    <div class="form-text">Fixado em 80% da mão de obra</div>
                 </div>
             </div>
             
@@ -272,7 +273,7 @@
     // Valores totais
     let valorTotalPecas = 0;
     let valorServico = 0;
-    let porcentagemMecanico = {{ porcentagem_padrao }};
+    let porcentagemMecanico = 80; // Fixado em 80%
     
     // Modais
     const quantidadeModal = new bootstrap.Modal(document.getElementById('quantidadeModal'));
@@ -589,12 +590,8 @@
         habilitarBotoesPDF();
     });
     
-    // Atualizar porcentagem
-    document.getElementById('porcentagem_mecanico').addEventListener('input', function() {
-        porcentagemMecanico = parseInt(this.value) || 0;
-        document.getElementById('porcentagem_display').textContent = `${porcentagemMecanico}%`;
-        atualizarValoresTotais();
-    });
+    // Porcentagem fixa em 80%
+    document.getElementById('porcentagem_display').textContent = '80%';
     
     // Atualizar valores totais
     function atualizarValoresTotais() {
@@ -717,8 +714,8 @@
     
     // Inicialização
     document.addEventListener('DOMContentLoaded', function() {
-        // Valor inicial da porcentagem
-        document.getElementById('porcentagem_display').textContent = `${porcentagemMecanico}%`;
+        // Valor fixo da porcentagem
+        document.getElementById('porcentagem_display').textContent = '80%';
     });
 </script>
 {% endblock %}
