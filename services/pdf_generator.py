@@ -313,9 +313,9 @@ class PDFGenerator:
         
         # Dados do serviço
         data = [
-            ["Mecânico:", servico['mecanico_nome']],
-            ["Cliente:", servico['cliente']],
-            ["Telefone:", servico['telefone']],
+            ["Mecânico:", servico['mecanico_nome'].upper()],
+            ["Cliente:", servico['cliente'].upper()],
+            ["Telefone:", servico['telefone'].upper()],
             ["Data:", data_atual],
         ]
         
@@ -331,7 +331,7 @@ class PDFGenerator:
         
         # Descrição do serviço
         elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["SmallNormal"]))
-        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'].upper(), styles["SmallNormal"]))
         
         elements.append(Spacer(1, 5*mm))
         
@@ -458,9 +458,9 @@ class PDFGenerator:
         
         # Dados do serviço
         data = [
-            ["Mecânico:", servico['mecanico_nome']],
-            ["Cliente:", servico['cliente']],
-            ["Telefone:", servico['telefone']],
+            ["Mecânico:", servico['mecanico_nome'].upper()],
+            ["Cliente:", servico['cliente'].upper()],
+            ["Telefone:", servico['telefone'].upper()],
             ["Data:", data_atual],
         ]
         
@@ -476,7 +476,7 @@ class PDFGenerator:
         
         # Descrição do serviço
         elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["SmallNormal"]))
-        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'].upper(), styles["SmallNormal"]))
         
         elements.append(Spacer(1, 5*mm))
         
