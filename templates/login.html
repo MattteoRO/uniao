@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Monark Motopeças e Bicicletaria{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-5">
+                    <h2 class="mb-4">Tela de Bloqueio</h2>
+                    
+                    <img src="{{ url_for('static', filename='imgs/lock.svg') }}" alt="Bloqueio" class="mb-4" style="width: 80px;">
+                    
+                    {% if error %}
+                    <div class="alert alert-danger">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Usuário" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Senha" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Desbloquear</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center text-muted py-3">
+                    Monark Motopeças e Bicicletaria<br>
+                    <small>Sistema de Gerenciamento</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
