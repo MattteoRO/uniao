@@ -16,10 +16,11 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 class PDFGenerator:
     """
     Classe para geração de PDF de serviços.
-    Gera três tipos de relatórios:
+    Gera diferentes tipos de relatórios:
     - Cliente: comprovante em tamanho 80mm x 200mm (largura específica para comprovantes)
     - Mecânico: relatório com serviços e valores a receber
     - Loja: relatório com serviços, peças e valores totais
+    - Extrato: relatório com movimentações financeiras de uma carteira
     """
     
     def __init__(self):
@@ -28,10 +29,12 @@ class PDFGenerator:
         self.cliente_dir = os.path.join(os.getcwd(), 'ser cliente')
         self.mecanico_dir = os.path.join(os.getcwd(), 'ser mecanico')
         self.loja_dir = os.path.join(os.getcwd(), 'ser loja')
+        self.extratos_dir = os.path.join(os.getcwd(), 'extratos')
         
         os.makedirs(self.cliente_dir, exist_ok=True)
         os.makedirs(self.mecanico_dir, exist_ok=True)
         os.makedirs(self.loja_dir, exist_ok=True)
+        os.makedirs(self.extratos_dir, exist_ok=True)
     
     def gerar_pdf_cliente(self, servico, config=None):
         """
