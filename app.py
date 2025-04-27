@@ -466,6 +466,8 @@ def api_extrato_carteira(mecanico_id):
     from models_flask import Mecanico, Carteira, Movimentacao, Configuracao
     from services.pdf_extrato import PDFExtratoGenerator
     from datetime import datetime, timedelta
+    from flask import send_file
+    import os
     
     # Verificar se o mecânico existe
     mecanico = Mecanico.query.get_or_404(mecanico_id)
@@ -478,6 +480,9 @@ def api_extrato_carteira(mecanico_id):
     # Parâmetros de filtro
     data_inicio = request.args.get('data_inicio')
     data_fim = request.args.get('data_fim')
+    
+    # Verificar se é para download direto ou retorno JSON
+    download_direto = request.args.get('download', 'false').lower() == 'true'
     
     # Converter datas
     try:
@@ -545,7 +550,16 @@ def api_extrato_carteira(mecanico_id):
     # Nome do arquivo para download
     filename = f"extrato_mecanico_{mecanico.id}_{datetime.now().strftime('%Y%m%d')}.pdf"
     
-    # Retornar URL do PDF
+    # Se for download direto, retornar o arquivo
+    if download_direto:
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+    
+    # Caso contrário, retornar JSON com URL do arquivo
     return jsonify({
         'success': True,
         'message': 'Extrato gerado com sucesso',

@@ -54,6 +54,7 @@
                             <div class="btn-group">
                                 <button type="button" class="btn btn-sm btn-outline-primary">Editar</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirCarteira({{ mecanico.id }}, '{{ mecanico.nome|replace("'", "\\'") }}', {{ mecanico.carteira.saldo if mecanico.carteira else 0 }})">Carteira</button>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="gerarExtrato({{ mecanico.id }})">Extrato</button>
                                 {% if mecanico.ativo %}
                                 <a href="{{ url_for('desativar_mecanico', mecanico_id=mecanico.id) }}" class="btn btn-sm btn-outline-danger">Desativar</a>
                                 {% else %}
@@ -383,6 +384,34 @@
             console.error('Erro ao registrar pagamento:', error);
             alert('Erro ao registrar pagamento. Consulte o console para mais detalhes.');
         });
+    }
+
+    // Função para gerar o extrato da carteira em PDF
+    function gerarExtrato(mecanicoId) {
+        // Mostrar indicador de carregamento
+        Swal.fire({
+            title: 'Gerando extrato...',
+            html: 'Aguarde enquanto geramos o extrato da carteira.',
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            allowEnterKey: false
+        });
+
+        // Iniciar download direto do PDF
+        window.location.href = `/api/carteira/${mecanicoId}/extrato?download=true`;
+        
+        // Após um pequeno delay, fechar o diálogo e mostrar mensagem
+        setTimeout(() => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Extrato gerado com sucesso!',
+                text: 'O download do arquivo PDF foi iniciado.',
+                confirmButtonText: 'OK'
+            });
+        }, 1500);
     }
 </script>
 {% endblock %}
