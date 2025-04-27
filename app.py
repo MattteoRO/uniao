@@ -532,86 +532,72 @@ def relatorio_mecanicos():
         data_inicio = datetime.now() - timedelta(days=30)
         data_fim = datetime.now() + timedelta(days=1)
     
-    # Construir query para total de serviços
-    query_servicos = db.session.query(
-        Servico.mecanico_id,
-        db.func.sum(Servico.valor_servico).label('total_servicos'),
-        db.func.max(Servico.porcentagem_mecanico).label('porcentagem_mecanico')
+    # Consulta de serviços por mecânico
+    servicosQuery = db.session.query(
+        Servico
     ).filter(
         Servico.status == 'concluido',
         Servico.data_criacao >= data_inicio,
         Servico.data_criacao <= data_fim
     )
     
-    # Filtrar por mecânico específico (serviços)
+    # Filtrar por mecânico específico se necessário
     if mecanico_id:
-        query_servicos = query_servicos.filter(Servico.mecanico_id == mecanico_id)
+        servicosQuery = servicosQuery.filter(Servico.mecanico_id == mecanico_id)
     
-    # Agrupar por mecânico (serviços)
-    query_servicos = query_servicos.group_by(Servico.mecanico_id)
-    
-    # Construir query para total de peças
-    query_pecas = db.session.query(
-        Servico.mecanico_id,
-        db.func.sum(ServicoPeca.preco_unitario * ServicoPeca.quantidade).label('total_pecas')
-    ).join(
-        ServicoPeca, ServicoPeca.servico_id == Servico.id
-    ).filter(
-        Servico.status == 'concluido',
-        Servico.data_criacao >= data_inicio,
-        Servico.data_criacao <= data_fim
-    )
-    
-    # Filtrar por mecânico específico (peças)
-    if mecanico_id:
-        query_pecas = query_pecas.filter(Servico.mecanico_id == mecanico_id)
-    
-    # Agrupar por mecânico (peças)
-    query_pecas = query_pecas.group_by(Servico.mecanico_id)
-    
-    # Executar as queries
-    resultados_servicos = {r.mecanico_id: {'total_servicos': r.total_servicos, 'porcentagem_mecanico': r.porcentagem_mecanico} for r in query_servicos.all()}
-    resultados_pecas = {r.mecanico_id: {'total_pecas': r.total_pecas} for r in query_pecas.all()}
-    
-    # Combinando os resultados
-    mecanicos_ids = set(list(resultados_servicos.keys()) + list(resultados_pecas.keys()))
-    
-    # Formatar os resultados
-    relatorio = []
-    for mecanico_id in mecanicos_ids:
-        # Obter dados do mecânico
-        mecanico = Mecanico.query.get(mecanico_id)
-        if not mecanico:
-            continue
-        
-        # Obter valores dos serviços
-        servico_info = resultados_servicos.get(mecanico_id, {'total_servicos': 0, 'porcentagem_mecanico': 80})
-        total_servicos = servico_info['total_servicos'] or 0
-        porcentagem_mecanico = servico_info['porcentagem_mecanico'] or 80
-        
-        # Obter valores das peças
-        peca_info = resultados_pecas.get(mecanico_id, {'total_pecas': 0})
-        total_pecas = peca_info['total_pecas'] or 0
-        
-        # Calcular valores
-        valor_mecanico = (total_servicos * porcentagem_mecanico) / 100
-        valor_loja_servico = total_servicos - valor_mecanico
-        valor_loja_total = valor_loja_servico + total_pecas
-        
-        relatorio.append({
-            'mecanico_id': mecanico.id,
-            'mecanico_nome': mecanico.nome,
-            'total_servicos': total_servicos,
-            'total_pecas': total_pecas,
-            'valor_mecanico': valor_mecanico,
-            'valor_loja_servico': valor_loja_servico,
-            'valor_loja_pecas': total_pecas,
-            'valor_loja_total': valor_loja_total,
-            'valor_total_geral': total_servicos + total_pecas
-        })
+    servicos = servicosQuery.all()
     
     # Obter todos os mecânicos para o filtro
     mecanicos = Mecanico.query.filter_by(ativo=True).all()
+    
+    # Dicionário para armazenar dados por mecânico
+    mecanicos_dados = {}
+    
+    # Processar cada serviço
+    for servico in servicos:
+        mecanico_id = servico.mecanico_id
+        
+        if mecanico_id not in mecanicos_dados:
+            mecanico = Mecanico.query.get(mecanico_id)
+            if not mecanico:
+                continue
+                
+            mecanicos_dados[mecanico_id] = {
+                'mecanico_id': mecanico.id,
+                'mecanico_nome': mecanico.nome,
+                'total_servicos': 0,
+                'total_pecas': 0,
+                'valor_mecanico': 0,
+                'valor_loja_servico': 0,
+                'valor_loja_pecas': 0,
+                'valor_loja_total': 0,
+                'valor_total_geral': 0
+            }
+        
+        # Valor do serviço (mão de obra)
+        valor_servico = servico.valor_servico or 0
+        porcentagem_mecanico = servico.porcentagem_mecanico or 80
+        
+        # Calcular valor para o mecânico
+        valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
+        valor_loja_servico = valor_servico - valor_mecanico
+        
+        # Calcular valor das peças
+        total_pecas = 0
+        for peca in servico.pecas:
+            total_pecas += (peca.preco_unitario * peca.quantidade)
+        
+        # Atualizar dados do mecânico
+        mecanicos_dados[mecanico_id]['total_servicos'] += valor_servico
+        mecanicos_dados[mecanico_id]['total_pecas'] += total_pecas
+        mecanicos_dados[mecanico_id]['valor_mecanico'] += valor_mecanico
+        mecanicos_dados[mecanico_id]['valor_loja_servico'] += valor_loja_servico
+        mecanicos_dados[mecanico_id]['valor_loja_pecas'] += total_pecas
+        mecanicos_dados[mecanico_id]['valor_loja_total'] += (valor_loja_servico + total_pecas)
+        mecanicos_dados[mecanico_id]['valor_total_geral'] += (valor_servico + total_pecas)
+    
+    # Transformar o dicionário em lista
+    relatorio = list(mecanicos_dados.values())
     
     return render_template(
         'relatorio_mecanicos.html',
@@ -829,13 +815,61 @@ def api_servico(servico_id):
 @app.route('/servicos/excluir/<int:servico_id>', methods=['POST'])
 def excluir_servico(servico_id):
     """Excluir um serviço do sistema."""
-    from models_flask import Servico, ServicoPeca, Movimentacao
+    from models_flask import Servico, ServicoPeca, Movimentacao, Carteira
     
     # Obter serviço
     servico = Servico.query.get_or_404(servico_id)
     
     try:
-        # Excluir movimentações relacionadas ao serviço
+        # Se o serviço estiver concluído, precisamos ajustar as carteiras
+        if servico.status == 'concluido':
+            # Obter carteira do mecânico
+            carteira_mecanico = Carteira.query.filter_by(mecanico_id=servico.mecanico_id).first()
+            
+            # Obter carteira da loja
+            carteira_loja = Carteira.query.filter_by(tipo='loja').first()
+            
+            # Se tiver carteiras afetadas (concluído), precisamos reverter saldos
+            if carteira_mecanico or carteira_loja:
+                # Valor do serviço
+                valor_servico = servico.valor_servico
+                porcentagem_mecanico = servico.porcentagem_mecanico
+                
+                # Calcular valores
+                valor_mecanico = (valor_servico * porcentagem_mecanico) / 100
+                valor_loja_servico = valor_servico - valor_mecanico
+                
+                # Calcular valor total das peças
+                total_pecas = 0
+                for peca in servico.pecas:
+                    total_pecas += (peca.preco_unitario * peca.quantidade)
+                
+                # Reverter saldo do mecânico
+                if carteira_mecanico and valor_mecanico > 0:
+                    carteira_mecanico.saldo -= valor_mecanico
+                    # Registrar movimentação negativa
+                    movimentacao_mecanico = Movimentacao(
+                        carteira_id=carteira_mecanico.id,
+                        valor=-valor_mecanico,
+                        justificativa=f"Exclusão do serviço #{servico.id} - {servico.cliente}",
+                        data=datetime.now()
+                    )
+                    db.session.add(movimentacao_mecanico)
+                
+                # Reverter saldo da loja
+                if carteira_loja and (valor_loja_servico > 0 or total_pecas > 0):
+                    valor_loja_total = valor_loja_servico + total_pecas
+                    carteira_loja.saldo -= valor_loja_total
+                    # Registrar movimentação negativa
+                    movimentacao_loja = Movimentacao(
+                        carteira_id=carteira_loja.id,
+                        valor=-valor_loja_total,
+                        justificativa=f"Exclusão do serviço #{servico.id} - {servico.cliente}",
+                        data=datetime.now()
+                    )
+                    db.session.add(movimentacao_loja)
+        
+        # Agora exclui todas as movimentações relacionadas ao serviço
         Movimentacao.query.filter_by(servico_id=servico_id).delete()
         
         # Excluir peças relacionadas ao serviço

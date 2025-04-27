@@ -47,11 +47,39 @@ class CSVManager:
         """
         try:
             if not termo_busca:
+                caminho = self.obter_caminho_completo()
+                # Retorna as primeiras 20 peças se não houver termo
+                if os.path.exists(caminho):
+                    pecas = []
+                    count = 0
+                    with open(caminho, 'r', encoding='utf-8-sig') as arquivo:
+                        leitor = csv.DictReader(arquivo)
+                        for linha in leitor:
+                            if count >= 20:
+                                break
+                                
+                            # Tratar preço: substituir "," por "." e converter para float
+                            preco_str = linha.get('PRECOVENDA', '0')
+                            preco_str = preco_str.replace('.', '').replace(',', '.')
+                            try:
+                                preco = float(preco_str)
+                            except ValueError:
+                                preco = 0.0
+                            
+                            peca = {
+                                'id': linha.get('ID', ''),
+                                'descricao': linha.get('DESCRICAO', ''),
+                                'preco': preco,
+                                'codigo_barras': linha.get('CODBARRAS', '') if linha.get('CODBARRAS', 'NULL') != 'NULL' else ''
+                            }
+                            pecas.append(peca)
+                            count += 1
+                    return pecas
                 return []
                 
             caminho = self.obter_caminho_completo()
-            
             if not os.path.exists(caminho):
+                print(f"Arquivo CSV não encontrado: {caminho}")
                 return []
             
             # Determinar o tipo de busca
