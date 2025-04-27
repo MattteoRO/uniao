@@ -460,6 +460,99 @@ def api_movimentacoes_carteira(mecanico_id):
     
     return jsonify(resultado)
 
+@app.route('/api/carteira/<int:mecanico_id>/extrato', methods=['GET'])
+def api_extrato_carteira(mecanico_id):
+    """API para gerar extrato em PDF da carteira do mecânico."""
+    from models_flask import Mecanico, Carteira, Movimentacao, Configuracao
+    from services.pdf_extrato import PDFExtratoGenerator
+    from datetime import datetime, timedelta
+    
+    # Verificar se o mecânico existe
+    mecanico = Mecanico.query.get_or_404(mecanico_id)
+    
+    # Verificar se existe a carteira
+    carteira = Carteira.query.filter_by(mecanico_id=mecanico_id).first()
+    if not carteira:
+        return jsonify({'error': 'Carteira não encontrada'}), 404
+    
+    # Parâmetros de filtro
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    
+    # Converter datas
+    try:
+        if data_inicio:
+            data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+        else:
+            # Último mês
+            data_inicio = datetime.now() - timedelta(days=30)
+            
+        if data_fim:
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d')
+            # Adicionar 1 dia para incluir o dia final
+            data_fim = data_fim + timedelta(days=1)
+        else:
+            data_fim = datetime.now() + timedelta(days=1)
+    except ValueError:
+        data_inicio = datetime.now() - timedelta(days=30)
+        data_fim = datetime.now() + timedelta(days=1)
+    
+    # Obter movimentações da carteira
+    movimentacoes = Movimentacao.query.filter(
+        Movimentacao.carteira_id == carteira.id,
+        Movimentacao.data >= data_inicio,
+        Movimentacao.data <= data_fim
+    ).order_by(Movimentacao.data.desc()).all()
+    
+    # Formatar dados para o PDF
+    mecanico_dict = {
+        'id': mecanico.id,
+        'nome': mecanico.nome,
+        'telefone': mecanico.telefone
+    }
+    
+    carteira_dict = {
+        'id': carteira.id,
+        'saldo': carteira.saldo
+    }
+    
+    movimentacoes_list = []
+    for mov in movimentacoes:
+        movimentacoes_list.append({
+            'id': mov.id,
+            'valor': mov.valor,
+            'justificativa': mov.justificativa,
+            'data': mov.data.strftime('%Y-%m-%dT%H:%M:%S'),
+            'servico_id': mov.servico_id
+        })
+    
+    # Obter configurações
+    config = Configuracao.query.first()
+    if config:
+        config_dict = {
+            'nome_empresa': config.nome_empresa,
+            'endereco': config.endereco,
+            'telefone': config.telefone,
+            'caminho_csv': config.caminho_csv
+        }
+    else:
+        config_dict = None
+    
+    # Gerar PDF
+    pdf_generator = PDFExtratoGenerator()
+    filepath = pdf_generator.gerar_pdf_extrato_mecanico(mecanico_dict, carteira_dict, movimentacoes_list, config_dict)
+    
+    # Nome do arquivo para download
+    filename = f"extrato_mecanico_{mecanico.id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    # Retornar URL do PDF
+    return jsonify({
+        'success': True,
+        'message': 'Extrato gerado com sucesso',
+        'filepath': filepath,
+        'filename': filename
+    })
+
 @app.route('/api/carteira/<int:mecanico_id>/pagar', methods=['POST'])
 def api_pagar_carteira(mecanico_id):
     """API para registrar pagamento e zerar saldo da carteira."""
