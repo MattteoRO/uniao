@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatório de Mecânicos - Monark Motopeças{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="display-5 mb-0">Relatório de Lucro por Mecânico</h1>
+        <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer"></i> Imprimir Relatório
+        </button>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Filtros</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('relatorio_mecanicos') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="data_inicio" class="form-label">Data Inicial</label>
+                <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{ data_inicio }}">
+            </div>
+            <div class="col-md-4">
+                <label for="data_fim" class="form-label">Data Final</label>
+                <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{ data_fim }}">
+            </div>
+            <div class="col-md-4">
+                <label for="mecanico_id" class="form-label">Mecânico</label>
+                <select class="form-select" id="mecanico_id" name="mecanico_id">
+                    <option value="">Todos os Mecânicos</option>
+                    {% for mecanico in mecanicos %}
+                    <option value="{{ mecanico.id }}" {% if mecanico_id and mecanico.id|string == mecanico_id|string %}selected{% endif %}>
+                        {{ mecanico.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-filter"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumo Total -->
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Resumo Geral do Período</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Serviços</h6>
+                        <h4 class="text-primary mb-0">R$ {{ relatorio|sum(attribute='total_servicos')|number_format(2, ',', '.') }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Peças</h6>
+                        <h4 class="text-primary mb-0">R$ {{ relatorio|sum(attribute='total_pecas')|number_format(2, ',', '.') }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Valor Mecânicos</h6>
+                        <h4 class="text-warning mb-0">R$ {{ relatorio|sum(attribute='valor_mecanico')|number_format(2, ',', '.') }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Loja</h6>
+                        <h4 class="text-success mb-0">R$ {{ relatorio|sum(attribute='valor_loja_total')|number_format(2, ',', '.') }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Gráfico Comparativo</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="graficoRelatorio" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Resultados -->
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Detalhamento por Mecânico</h5>
+    </div>
+    <div class="card-body">
+        {% if relatorio %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mecânico</th>
+                        <th class="text-end">Serviços (R$)</th>
+                        <th class="text-end">Peças (R$)</th>
+                        <th class="text-end">Valor Mecânico (R$)</th>
+                        <th class="text-end">Valor Loja (R$)</th>
+                        <th class="text-end">Total Geral (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in relatorio %}
+                    <tr>
+                        <td>{{ item.mecanico_nome }}</td>
+                        <td class="text-end">{{ item.total_servicos|number_format(2, ',', '.') }}</td>
+                        <td class="text-end">{{ item.total_pecas|number_format(2, ',', '.') }}</td>
+                        <td class="text-end text-warning">{{ item.valor_mecanico|number_format(2, ',', '.') }}</td>
+                        <td class="text-end text-success">{{ item.valor_loja_total|number_format(2, ',', '.') }}</td>
+                        <td class="text-end fw-bold">{{ item.valor_total_geral|number_format(2, ',', '.') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr class="fw-bold">
+                        <td>TOTAL</td>
+                        <td class="text-end">{{ relatorio|sum(attribute='total_servicos')|number_format(2, ',', '.') }}</td>
+                        <td class="text-end">{{ relatorio|sum(attribute='total_pecas')|number_format(2, ',', '.') }}</td>
+                        <td class="text-end text-warning">{{ relatorio|sum(attribute='valor_mecanico')|number_format(2, ',', '.') }}</td>
+                        <td class="text-end text-success">{{ relatorio|sum(attribute='valor_loja_total')|number_format(2, ',', '.') }}</td>
+                        <td class="text-end">{{ relatorio|sum(attribute='valor_total_geral')|number_format(2, ',', '.') }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            Nenhum resultado encontrado para os filtros selecionados.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dados para o gráfico
+        const mecanicos = [
+            {% for item in relatorio %}
+            "{{ item.mecanico_nome }}",
+            {% endfor %}
+        ];
+        
+        const valores_mecanicos = [
+            {% for item in relatorio %}
+            {{ item.valor_mecanico }},
+            {% endfor %}
+        ];
+        
+        const valores_loja = [
+            {% for item in relatorio %}
+            {{ item.valor_loja_total }},
+            {% endfor %}
+        ];
+        
+        const valores_pecas = [
+            {% for item in relatorio %}
+            {{ item.total_pecas }},
+            {% endfor %}
+        ];
+        
+        // Criar gráfico
+        const ctx = document.getElementById('graficoRelatorio').getContext('2d');
+        const graficoRelatorio = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: mecanicos,
+                datasets: [
+                    {
+                        label: 'Valor Mecânico',
+                        data: valores_mecanicos,
+                        backgroundColor: 'rgba(255, 193, 7, 0.5)',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Valor Loja (Serviços)',
+                        data: valores_loja.map((val, idx) => val - valores_pecas[idx]),
+                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Valor Loja (Peças)',
+                        data: valores_pecas,
+                        backgroundColor: 'rgba(23, 162, 184, 0.5)',
+                        borderColor: 'rgba(23, 162, 184, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribuição de Valores por Mecânico'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                return `${context.dataset.label}: R$ ${value.toFixed(2).replace('.', ',')}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                    },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toFixed(2).replace('.', ',');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
