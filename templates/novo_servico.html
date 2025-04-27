@@ -295,8 +295,75 @@
     let valorServico = 0;
     let porcentagemMecanico = {{ porcentagem_padrao }};
     
-    // Modal de quantidade
+    // Modais
     const quantidadeModal = new bootstrap.Modal(document.getElementById('quantidadeModal'));
+    const cadastroManualModal = new bootstrap.Modal(document.getElementById('cadastroManualModal'));
+    
+    // Evento para abrir o modal de cadastro manual
+    document.getElementById('btn_cadastro_manual').addEventListener('click', function() {
+        // Limpar formulário
+        document.getElementById('manual_id').value = '';
+        document.getElementById('manual_descricao').value = '';
+        document.getElementById('manual_preco').value = '';
+        document.getElementById('manual_quantidade').value = '1';
+        document.getElementById('manual_codigo_barras').value = '';
+        document.getElementById('manual_valor_total').value = '';
+        
+        // Mostrar modal
+        cadastroManualModal.show();
+    });
+    
+    // Calcular valor total no cadastro manual quando mudar preço ou quantidade
+    document.getElementById('manual_preco').addEventListener('input', calcularValorTotalManual);
+    document.getElementById('manual_quantidade').addEventListener('input', calcularValorTotalManual);
+    
+    function calcularValorTotalManual() {
+        const preco = parseFloat(document.getElementById('manual_preco').value) || 0;
+        const quantidade = parseInt(document.getElementById('manual_quantidade').value) || 0;
+        const total = preco * quantidade;
+        
+        document.getElementById('manual_valor_total').value = total.toFixed(2).replace('.', ',');
+    }
+    
+    // Salvar peça cadastrada manualmente
+    document.getElementById('btn_salvar_peca_manual').addEventListener('click', function() {
+        const id = document.getElementById('manual_id').value.trim() || 'MANUAL-' + Date.now();
+        const descricao = document.getElementById('manual_descricao').value.trim();
+        const preco = parseFloat(document.getElementById('manual_preco').value) || 0;
+        const quantidade = parseInt(document.getElementById('manual_quantidade').value) || 0;
+        const codigo_barras = document.getElementById('manual_codigo_barras').value.trim();
+        
+        // Validar dados
+        if (!descricao) {
+            alert('Por favor, informe a descrição da peça.');
+            return;
+        }
+        
+        if (preco <= 0) {
+            alert('Por favor, informe um preço válido.');
+            return;
+        }
+        
+        if (quantidade <= 0) {
+            alert('Por favor, informe uma quantidade válida.');
+            return;
+        }
+        
+        // Adicionar peça
+        pecas.push({
+            id: id,
+            descricao: descricao,
+            preco: preco,
+            codigo_barras: codigo_barras,
+            quantidade: quantidade
+        });
+        
+        // Atualizar tabela e valores
+        atualizarTabelaPecas();
+        
+        // Fechar modal
+        cadastroManualModal.hide();
+    });
     
     // Buscar peças no servidor
     let timeoutId;
