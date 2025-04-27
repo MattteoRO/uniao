@@ -111,7 +111,7 @@
                                     <i class="bi bi-x-circle"></i> Cancelar
                                 </button>
                                 {% endif %}
-                                <div class="btn-group">
+                                <div class="btn-group me-2">
                                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
                                             data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-file-pdf"></i> PDF
@@ -135,8 +135,20 @@
                                                <i class="bi bi-shop"></i> Loja
                                             </a>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" href="#"
+                                               onclick="exportPDFsToCSV('{{ servico.id }}')">
+                                               <i class="bi bi-file-spreadsheet"></i> Exportar para CSV
+                                            </a>
+                                        </li>
                                     </ul>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-excluir"
+                                        data-id="{{ servico.id }}" data-cliente="{{ servico.cliente }}"
+                                        data-bs-toggle="modal" data-bs-target="#confirmaExclusaoModal">
+                                    <i class="bi bi-trash"></i> Excluir
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -237,6 +249,36 @@
     </div>
 </div>
 
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="confirmaExclusaoModal" tabindex="-1" aria-labelledby="confirmaExclusaoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmaExclusaoModalLabel">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Atenção: Esta ação não pode ser desfeita!
+                </div>
+                <p id="confirmaExclusaoTexto">Tem certeza que deseja excluir este serviço?</p>
+                <p>A exclusão irá remover permanentemente:</p>
+                <ul>
+                    <li>Todas as peças associadas ao serviço</li>
+                    <li>Todas as movimentações financeiras relacionadas</li>
+                    <li>Todos os registros deste serviço no sistema</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formExclusao" method="POST">
+                    <button type="submit" class="btn btn-danger">Excluir Permanentemente</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block scripts %}
 <script>
     // Inicializar tooltips
@@ -325,7 +367,68 @@
         filtroStatus.addEventListener('change', function() {
             document.getElementById('filtroForm').submit();
         });
+        
+        // Configurar exclusão de serviço
+        const botoesExcluir = document.querySelectorAll('.btn-excluir');
+        const confirmaExclusaoTexto = document.getElementById('confirmaExclusaoTexto');
+        const formExclusao = document.getElementById('formExclusao');
+        
+        botoesExcluir.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const cliente = this.getAttribute('data-cliente');
+                
+                confirmaExclusaoTexto.innerHTML = `Tem certeza que deseja <strong>excluir permanentemente</strong> o serviço para o cliente <strong>${cliente}</strong>?`;
+                formExclusao.action = `/servicos/excluir/${id}`;
+            });
+        });
     });
+    
+    // Função para exportar serviço para CSV
+    function exportPDFsToCSV(servicoId) {
+        // Fazer requisição para obter dados do serviço
+        fetch(`/servicos/api/${servicoId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Erro ao obter dados do serviço: ' + data.error);
+                    return;
+                }
+                
+                const servico = data.servico;
+                
+                // Converter dados para formato CSV
+                let csvContent = 'data:text/csv;charset=utf-8,';
+                
+                // Cabeçalho
+                csvContent += 'Código,Cliente,Telefone,Mecânico,Data,Status,Valor Serviço,Valor Peças,Valor Total\n';
+                
+                // Dados gerais
+                csvContent += `"${servico.id}","${servico.cliente}","${servico.telefone}","${servico.mecanico_nome}","${new Date(servico.data_criacao).toLocaleDateString('pt-BR')}","${servico.status}","${servico.valor_servico}","${servico.valor_total_pecas}","${servico.valor_servico + servico.valor_total_pecas}"\n\n`;
+                
+                // Cabeçalho peças
+                csvContent += 'Peça ID,Descrição,Código Barras,Preço Unitário,Quantidade,Total\n';
+                
+                // Dados das peças
+                servico.pecas.forEach(peca => {
+                    const total = peca.preco_unitario * peca.quantidade;
+                    csvContent += `"${peca.peca_id}","${peca.descricao}","${peca.codigo_barras || ''}","${peca.preco_unitario}","${peca.quantidade}","${total}"\n`;
+                });
+                
+                // Download do arquivo CSV
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `servico_${servico.id}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
+            .catch(error => {
+                console.error('Erro ao exportar para CSV:', error);
+                alert('Erro ao exportar para CSV. Por favor, tente novamente.');
+            });
+    }
 </script>
 {% endblock %}
 {% endblock %}

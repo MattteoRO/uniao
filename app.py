@@ -532,43 +532,69 @@ def relatorio_mecanicos():
         data_inicio = datetime.now() - timedelta(days=30)
         data_fim = datetime.now() + timedelta(days=1)
     
-    # Construir query base
-    query = db.session.query(
-        Servico, 
+    # Construir query para total de serviços
+    query_servicos = db.session.query(
+        Servico.mecanico_id,
         db.func.sum(Servico.valor_servico).label('total_servicos'),
-        db.func.sum(ServicoPeca.preco_unitario * ServicoPeca.quantidade).label('total_pecas')
-    ).join(
-        ServicoPeca, ServicoPeca.servico_id == Servico.id, isouter=True
+        db.func.max(Servico.porcentagem_mecanico).label('porcentagem_mecanico')
     ).filter(
         Servico.status == 'concluido',
         Servico.data_criacao >= data_inicio,
         Servico.data_criacao <= data_fim
     )
     
-    # Filtrar por mecânico específico
+    # Filtrar por mecânico específico (serviços)
     if mecanico_id:
-        query = query.filter(Servico.mecanico_id == mecanico_id)
+        query_servicos = query_servicos.filter(Servico.mecanico_id == mecanico_id)
     
-    # Agrupar por mecânico
-    query = query.group_by(Servico.mecanico_id)
+    # Agrupar por mecânico (serviços)
+    query_servicos = query_servicos.group_by(Servico.mecanico_id)
     
-    # Executar a query
-    resultados = query.all()
+    # Construir query para total de peças
+    query_pecas = db.session.query(
+        Servico.mecanico_id,
+        db.func.sum(ServicoPeca.preco_unitario * ServicoPeca.quantidade).label('total_pecas')
+    ).join(
+        ServicoPeca, ServicoPeca.servico_id == Servico.id
+    ).filter(
+        Servico.status == 'concluido',
+        Servico.data_criacao >= data_inicio,
+        Servico.data_criacao <= data_fim
+    )
+    
+    # Filtrar por mecânico específico (peças)
+    if mecanico_id:
+        query_pecas = query_pecas.filter(Servico.mecanico_id == mecanico_id)
+    
+    # Agrupar por mecânico (peças)
+    query_pecas = query_pecas.group_by(Servico.mecanico_id)
+    
+    # Executar as queries
+    resultados_servicos = {r.mecanico_id: {'total_servicos': r.total_servicos, 'porcentagem_mecanico': r.porcentagem_mecanico} for r in query_servicos.all()}
+    resultados_pecas = {r.mecanico_id: {'total_pecas': r.total_pecas} for r in query_pecas.all()}
+    
+    # Combinando os resultados
+    mecanicos_ids = set(list(resultados_servicos.keys()) + list(resultados_pecas.keys()))
     
     # Formatar os resultados
     relatorio = []
-    for servico, total_servicos, total_pecas in resultados:
-        # Evitar valores None
-        total_servicos = total_servicos or 0
-        total_pecas = total_pecas or 0
-        
+    for mecanico_id in mecanicos_ids:
         # Obter dados do mecânico
-        mecanico = Mecanico.query.get(servico.mecanico_id)
+        mecanico = Mecanico.query.get(mecanico_id)
         if not mecanico:
             continue
-            
+        
+        # Obter valores dos serviços
+        servico_info = resultados_servicos.get(mecanico_id, {'total_servicos': 0, 'porcentagem_mecanico': 80})
+        total_servicos = servico_info['total_servicos'] or 0
+        porcentagem_mecanico = servico_info['porcentagem_mecanico'] or 80
+        
+        # Obter valores das peças
+        peca_info = resultados_pecas.get(mecanico_id, {'total_pecas': 0})
+        total_pecas = peca_info['total_pecas'] or 0
+        
         # Calcular valores
-        valor_mecanico = (total_servicos * servico.porcentagem_mecanico) / 100
+        valor_mecanico = (total_servicos * porcentagem_mecanico) / 100
         valor_loja_servico = total_servicos - valor_mecanico
         valor_loja_total = valor_loja_servico + total_pecas
         
@@ -595,6 +621,194 @@ def relatorio_mecanicos():
         data_fim=(data_fim - timedelta(days=1)).strftime('%Y-%m-%d'),
         mecanico_id=mecanico_id
     )
+
+# Carteira da loja
+@app.route('/carteira/loja', methods=['GET'])
+def carteira_loja():
+    """Página da carteira da loja."""
+    from models_flask import Carteira, Movimentacao
+    from datetime import datetime, timedelta
+    
+    # Obter carteira da loja
+    carteira = Carteira.query.filter_by(tipo='loja').first()
+    if not carteira:
+        # Criar carteira da loja se não existir
+        carteira = Carteira(tipo='loja', mecanico_id=None, saldo=0.0)
+        db.session.add(carteira)
+        db.session.commit()
+    
+    # Filtros
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    tipo_movimento = request.args.get('tipo_movimento')
+    
+    # Converter datas
+    try:
+        if data_inicio:
+            data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+        else:
+            # Último mês
+            data_inicio = datetime.now() - timedelta(days=30)
+            
+        if data_fim:
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d')
+            # Adicionar 1 dia para incluir o dia final
+            data_fim = data_fim + timedelta(days=1)
+        else:
+            data_fim = datetime.now() + timedelta(days=1)
+    except ValueError:
+        flash('Data inválida. Usando últimos 30 dias.', 'warning')
+        data_inicio = datetime.now() - timedelta(days=30)
+        data_fim = datetime.now() + timedelta(days=1)
+    
+    # Construir query base
+    query = Movimentacao.query.filter(
+        Movimentacao.carteira_id == carteira.id,
+        Movimentacao.data >= data_inicio,
+        Movimentacao.data <= data_fim
+    )
+    
+    # Filtrar por tipo de movimento
+    if tipo_movimento == 'entrada':
+        query = query.filter(Movimentacao.valor > 0)
+    elif tipo_movimento == 'saida':
+        query = query.filter(Movimentacao.valor < 0)
+    
+    # Obter movimentações ordenadas por data
+    movimentacoes = query.order_by(Movimentacao.data.desc()).all()
+    
+    # Obter movimentações para o gráfico (últimos 30 dias)
+    data_grafico_inicio = datetime.now() - timedelta(days=30)
+    movimentacoes_grafico = Movimentacao.query.filter(
+        Movimentacao.carteira_id == carteira.id,
+        Movimentacao.data >= data_grafico_inicio
+    ).order_by(Movimentacao.data).all()
+    
+    return render_template(
+        'carteira_loja.html',
+        carteira=carteira,
+        movimentacoes=movimentacoes,
+        movimentacoes_grafico=movimentacoes_grafico,
+        data_inicio=data_inicio.strftime('%Y-%m-%d'),
+        data_fim=(data_fim - timedelta(days=1)).strftime('%Y-%m-%d'),
+        tipo_movimento=tipo_movimento
+    )
+
+@app.route('/carteira/loja/movimentacao', methods=['POST'])
+def registrar_movimentacao_loja():
+    """Registrar nova movimentação na carteira da loja."""
+    from models_flask import Carteira, Movimentacao
+    
+    # Obter carteira da loja
+    carteira = Carteira.query.filter_by(tipo='loja').first()
+    if not carteira:
+        flash('Carteira da loja não encontrada.', 'danger')
+        return redirect(url_for('carteira_loja'))
+    
+    # Obter dados do formulário
+    tipo = request.form.get('tipo')
+    valor = float(request.form.get('valor', 0))
+    justificativa = request.form.get('justificativa', '')
+    categoria = request.form.get('categoria', '')
+    
+    # Validar valor
+    if valor <= 0:
+        flash('Valor deve ser maior que zero.', 'danger')
+        return redirect(url_for('carteira_loja'))
+    
+    # Ajustar valor de acordo com o tipo
+    valor_final = valor if tipo == 'entrada' else -valor
+    
+    # Adicionar categoria na justificativa
+    if categoria:
+        justificativa = f"[{categoria}] {justificativa}"
+    
+    # Criar movimentação
+    movimentacao = Movimentacao(
+        carteira_id=carteira.id,
+        valor=valor_final,
+        justificativa=justificativa,
+        data=datetime.now()
+    )
+    
+    # Atualizar saldo
+    carteira.saldo += valor_final
+    
+    # Salvar no banco de dados
+    db.session.add(movimentacao)
+    db.session.commit()
+    
+    flash(f"{'Entrada' if tipo == 'entrada' else 'Retirada'} registrada com sucesso!", 'success')
+    return redirect(url_for('carteira_loja'))
+
+@app.route('/carteira/loja/zerar', methods=['POST'])
+def zerar_carteira_loja():
+    """Zerar saldo da carteira da loja (saque total)."""
+    from models_flask import Carteira, Movimentacao
+    
+    # Verificar confirmação
+    confirmacao = request.form.get('confirmacao')
+    if confirmacao != 'CONFIRMAR':
+        flash('Confirmação inválida. Operação cancelada.', 'danger')
+        return redirect(url_for('carteira_loja'))
+    
+    # Obter carteira da loja
+    carteira = Carteira.query.filter_by(tipo='loja').first()
+    if not carteira:
+        flash('Carteira da loja não encontrada.', 'danger')
+        return redirect(url_for('carteira_loja'))
+    
+    # Obter saldo atual
+    saldo_atual = carteira.saldo
+    if saldo_atual <= 0:
+        flash('Saldo já está zerado.', 'warning')
+        return redirect(url_for('carteira_loja'))
+    
+    # Criar movimentação negativa para zerar
+    justificativa = request.form.get('justificativa', 'Saque total realizado')
+    movimentacao = Movimentacao(
+        carteira_id=carteira.id,
+        valor=-saldo_atual,
+        justificativa=f"[SAQUE TOTAL] {justificativa}",
+        data=datetime.now()
+    )
+    
+    # Zerar saldo
+    carteira.saldo = 0
+    
+    # Salvar no banco de dados
+    db.session.add(movimentacao)
+    db.session.commit()
+    
+    flash(f"Saque total de R$ {saldo_atual:.2f} realizado com sucesso!", 'success')
+    return redirect(url_for('carteira_loja'))
+
+# Rota para excluir serviço
+@app.route('/servicos/excluir/<int:servico_id>', methods=['POST'])
+def excluir_servico(servico_id):
+    """Excluir um serviço do sistema."""
+    from models_flask import Servico, ServicoPeca, Movimentacao
+    
+    # Obter serviço
+    servico = Servico.query.get_or_404(servico_id)
+    
+    try:
+        # Excluir movimentações relacionadas ao serviço
+        Movimentacao.query.filter_by(servico_id=servico_id).delete()
+        
+        # Excluir peças relacionadas ao serviço
+        ServicoPeca.query.filter_by(servico_id=servico_id).delete()
+        
+        # Excluir o serviço
+        db.session.delete(servico)
+        db.session.commit()
+        
+        flash('Serviço excluído com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir serviço: {str(e)}', 'danger')
+    
+    return redirect(url_for('servicos'))
 
 # Inicialização do banco de dados
 with app.app_context():

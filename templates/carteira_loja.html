@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}Carteira da Loja - Monark Motopeças{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="display-5 mb-0">Carteira da Loja</h1>
+        <div>
+            <button type="button" class="btn btn-outline-secondary me-2" id="btn_exportar_csv">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="btn_gerar_pdf">
+                <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Informações da Carteira</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h6 class="text-muted mb-2">Saldo Atual</h6>
+                    <h2 class="display-4 text-primary">R$ {{ carteira.saldo|number_format(2, ',', '.') }}</h2>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaEntradaModal">
+                        <i class="bi bi-plus-circle"></i> Nova Entrada
+                    </button>
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#novaRetiradaModal">
+                        <i class="bi bi-dash-circle"></i> Nova Retirada
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#realizarSaqueModal"
+                            {% if carteira.saldo <= 0 %}disabled{% endif %}>
+                        <i class="bi bi-cash"></i> Realizar Saque Total
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">Filtros</h5>
+            </div>
+            <div class="card-body">
+                <form id="filtroForm" method="GET">
+                    <div class="mb-3">
+                        <label for="data_inicio" class="form-label">Data Inicial</label>
+                        <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
+                               value="{{ data_inicio }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_fim" class="form-label">Data Final</label>
+                        <input type="date" class="form-control" id="data_fim" name="data_fim" 
+                               value="{{ data_fim }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipo_movimento" class="form-label">Tipo de Movimento</label>
+                        <select class="form-select" id="tipo_movimento" name="tipo_movimento">
+                            <option value="">Todos</option>
+                            <option value="entrada" {% if tipo_movimento == 'entrada' %}selected{% endif %}>Entradas</option>
+                            <option value="saida" {% if tipo_movimento == 'saida' %}selected{% endif %}>Saídas</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter"></i> Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">Movimentações Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if movimentacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabela_movimentacoes">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th class="text-end">Valor</th>
+                                <th>Serviço</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mov in movimentacoes %}
+                            <tr>
+                                <td>{{ mov.data.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ mov.justificativa or 'Sem descrição' }}</td>
+                                <td class="text-end {% if mov.valor > 0 %}text-success{% else %}text-danger{% endif %}">
+                                    R$ {{ mov.valor|number_format(2, ',', '.') }}
+                                </td>
+                                <td>
+                                    {% if mov.servico_id %}
+                                    <a href="{{ url_for('servicos') }}?id={{ mov.servico_id }}" class="btn btn-sm btn-outline-info">
+                                        Ver Serviço
+                                    </a>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Nenhuma movimentação encontrada para o período selecionado.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Gráfico de Movimentações -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">Gráfico de Movimentações</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="graficoMovimentacoes" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Entrada -->
+<div class="modal fade" id="novaEntradaModal" tabindex="-1" aria-labelledby="novaEntradaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="novaEntradaModalLabel">Nova Entrada de Valor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('registrar_movimentacao_loja') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="tipo" value="entrada">
+                    <div class="mb-3">
+                        <label for="valor_entrada" class="form-label">Valor (R$)</label>
+                        <input type="number" class="form-control" id="valor_entrada" name="valor" 
+                               min="0.01" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="justificativa_entrada" class="form-label">Descrição/Justificativa</label>
+                        <textarea class="form-control" id="justificativa_entrada" name="justificativa" 
+                                  rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar Entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Retirada -->
+<div class="modal fade" id="novaRetiradaModal" tabindex="-1" aria-labelledby="novaRetiradaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="novaRetiradaModalLabel">Nova Retirada de Valor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('registrar_movimentacao_loja') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="tipo" value="retirada">
+                    <div class="mb-3">
+                        <label for="valor_retirada" class="form-label">Valor (R$)</label>
+                        <input type="number" class="form-control" id="valor_retirada" name="valor" 
+                               min="0.01" step="0.01" max="{{ carteira.saldo }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="categoria_retirada" class="form-label">Categoria</label>
+                        <select class="form-select" id="categoria_retirada" name="categoria" required>
+                            <option value="">Selecione uma categoria</option>
+                            <option value="Gasolina">Gasolina</option>
+                            <option value="Peças">Peças</option>
+                            <option value="Luz">Luz</option>
+                            <option value="Internet">Internet</option>
+                            <option value="Água">Água</option>
+                            <option value="Aluguel">Aluguel</option>
+                            <option value="Pagamento">Pagamento</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="justificativa_retirada" class="form-label">Descrição/Justificativa</label>
+                        <textarea class="form-control" id="justificativa_retirada" name="justificativa" 
+                                  rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Registrar Retirada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Realizar Saque -->
+<div class="modal fade" id="realizarSaqueModal" tabindex="-1" aria-labelledby="realizarSaqueModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="realizarSaqueModalLabel">Realizar Saque Total</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('zerar_carteira_loja') }}" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Atenção! Esta operação irá zerar o saldo da carteira.
+                    </div>
+                    <p>Valor a ser sacado: <strong>R$ {{ carteira.saldo|number_format(2, ',', '.') }}</strong></p>
+                    <div class="mb-3">
+                        <label for="justificativa_saque" class="form-label">Justificativa do Saque</label>
+                        <textarea class="form-control" id="justificativa_saque" name="justificativa" 
+                                  rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmacao" class="form-label">Digite "CONFIRMAR" para prosseguir</label>
+                        <input type="text" class="form-control" id="confirmacao" name="confirmacao" 
+                               pattern="CONFIRMAR" required>
+                        <div class="form-text">Este campo faz distinção entre maiúsculas e minúsculas.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Realizar Saque</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dados para o gráfico
+        const datas = [
+            {% for mov in movimentacoes_grafico %}
+            "{{ mov.data.strftime('%d/%m') }}",
+            {% endfor %}
+        ];
+        
+        const valores = [
+            {% for mov in movimentacoes_grafico %}
+            {{ mov.valor }},
+            {% endfor %}
+        ];
+        
+        // Criar gráfico
+        const ctx = document.getElementById('graficoMovimentacoes').getContext('2d');
+        const graficoMovimentacoes = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: datas,
+                datasets: [{
+                    label: 'Movimentações',
+                    data: valores,
+                    backgroundColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value >= 0 ? 'rgba(40, 167, 69, 0.5)' : 'rgba(220, 53, 69, 0.5)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)';
+                    },
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + value.toFixed(2).replace('.', ',');
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                return `R$ ${value.toFixed(2).replace('.', ',')}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Exportar para CSV
+        document.getElementById('btn_exportar_csv').addEventListener('click', function() {
+            exportTableToCSV('tabela_movimentacoes', 'movimentacoes_loja.csv');
+        });
+        
+        // Gerar PDF
+        document.getElementById('btn_gerar_pdf').addEventListener('click', function() {
+            window.print();
+        });
+    });
+    
+    // Função para exportar tabela para CSV
+    function exportTableToCSV(tableID, filename) {
+        let csv = [];
+        const rows = document.querySelectorAll('#' + tableID + ' tr');
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = [], cols = rows[i].querySelectorAll('td, th');
+            
+            for (let j = 0; j < cols.length; j++) {
+                // Remover botões e tags HTML
+                let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+                
+                // Adicionar aspas se tiver vírgula
+                if (text.includes(',')) {
+                    text = '"' + text + '"';
+                }
+                
+                row.push(text);
+            }
+            
+            csv.push(row.join(','));
+        }
+        
+        // Download CSV
+        const csvFile = new Blob([csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(csvFile);
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+{% endblock %}
