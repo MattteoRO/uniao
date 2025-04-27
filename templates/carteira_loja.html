@@ -701,14 +701,31 @@
                     // Valores estáticos para teste
                     const saldoAtual = {{ carteira.saldo }};
                     
-                    // Determinar movimentações por categoria
-                    const servicosValor = {{ movimentacoes|selectattr('justificativa', 'search', 'Serviço')|selectattr('valor', '>', 0)|sum(attribute='valor')|default(0) }};
-                    const pecasValor = {{ movimentacoes|selectattr('justificativa', 'search', 'peça')|selectattr('valor', '>', 0)|sum(attribute='valor')|default(0) }};
-                    const outrasEntradas = {{ movimentacoes|selectattr('valor', '>', 0)|rejectattr('justificativa', 'search', 'Serviço')|rejectattr('justificativa', 'search', 'peça')|sum(attribute='valor')|default(0) }};
+                    // Inicializar valores
+                    let servicosValor = 0;
+                    let pecasValor = 0;
+                    let pagamentosMecanicos = 0;
+                    let retiradas = 0;
                     
-                    const pagamentosMecanicos = {{ movimentacoes|selectattr('justificativa', 'search', 'Pagamento')|selectattr('valor', '<', 0)|sum(attribute='valor')|abs|default(0) }};
-                    const retiradas = {{ movimentacoes|selectattr('justificativa', 'search', 'Retirada')|selectattr('valor', '<', 0)|sum(attribute='valor')|abs|default(0) }};
-                    const outrosGastos = {{ movimentacoes|selectattr('valor', '<', 0)|rejectattr('justificativa', 'search', 'Pagamento')|rejectattr('justificativa', 'search', 'Retirada')|sum(attribute='valor')|abs|default(0) }};
+                    // Valores entrada/saída
+                    const todasEntradas = {{ movimentacoes|selectattr('valor', '>', 0)|sum(attribute='valor')|default(0) }};
+                    const todasSaidas = {{ movimentacoes|selectattr('valor', '<', 0)|sum(attribute='valor')|abs|default(0) }};
+                    
+                    // Classificar manualmente
+                    {% for mov in movimentacoes %}
+                        {% if mov.valor > 0 and mov.justificativa and 'Serviço' in mov.justificativa %}
+                            servicosValor += {{ mov.valor }};
+                        {% elif mov.valor > 0 and mov.justificativa and ('peça' in mov.justificativa or 'peças' in mov.justificativa) %}
+                            pecasValor += {{ mov.valor }};
+                        {% elif mov.valor < 0 and mov.justificativa and 'Pagamento' in mov.justificativa %}
+                            pagamentosMecanicos += {{ mov.valor|abs }};
+                        {% elif mov.valor < 0 and mov.justificativa and 'Retirada' in mov.justificativa %}
+                            retiradas += {{ mov.valor|abs }};
+                        {% endif %}
+                    {% endfor %}
+                    
+                    const outrasEntradas = todasEntradas - servicosValor - pecasValor;
+                    const outrosGastos = todasSaidas - pagamentosMecanicos - retiradas;
                     
                     // Totais
                     const totalReceitas = servicosValor + pecasValor + outrasEntradas;

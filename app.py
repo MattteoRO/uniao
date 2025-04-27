@@ -716,6 +716,156 @@ def relatorio_mecanicos():
     )
 
 # Carteira da loja
+@app.route('/api/carteira/loja/resumo', methods=['GET'])
+def api_resumo_carteira_loja():
+    """API para obter resumo financeiro detalhado da carteira da loja."""
+    from models_flask import Carteira, Movimentacao, Servico, ServicoPeca, Mecanico
+    from datetime import datetime, timedelta
+    
+    # Obter carteira da loja
+    carteira = Carteira.query.filter_by(tipo='loja').first()
+    if not carteira:
+        return jsonify({'error': 'Carteira da loja não encontrada'}), 404
+    
+    # Filtros
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    
+    # Converter datas
+    try:
+        if data_inicio:
+            data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+        else:
+            # Último mês
+            data_inicio = datetime.now() - timedelta(days=30)
+            
+        if data_fim:
+            data_fim = datetime.strptime(data_fim, '%Y-%m-%d')
+            # Adicionar 1 dia para incluir o dia final
+            data_fim = data_fim + timedelta(days=1)
+        else:
+            data_fim = datetime.now() + timedelta(days=1)
+    except ValueError:
+        data_inicio = datetime.now() - timedelta(days=30)
+        data_fim = datetime.now() + timedelta(days=1)
+    
+    # Obter movimentações para o período
+    movimentacoes = Movimentacao.query.filter(
+        Movimentacao.carteira_id == carteira.id,
+        Movimentacao.data >= data_inicio,
+        Movimentacao.data <= data_fim
+    ).all()
+    
+    # Calcular resumo financeiro
+    resumo = {
+        'saldo_atual': carteira.saldo,
+        'servicos_valor': 0.0,
+        'pecas_valor': 0.0,
+        'outras_entradas': 0.0,
+        'pagamentos_mecanicos': 0.0,
+        'retiradas': 0.0,
+        'outros_gastos': 0.0,
+        'total_receitas': 0.0,
+        'total_despesas': 0.0,
+        'lucro_liquido': 0.0
+    }
+    
+    # Serviços concluídos no período
+    servicos = Servico.query.filter(
+        Servico.status == 'concluido',
+        Servico.data_criacao >= data_inicio,
+        Servico.data_criacao <= data_fim
+    ).all()
+    
+    # Obter detalhe dos serviços
+    servicos_detalhe = []
+    for servico in servicos:
+        valor_total = servico.valor_servico or 0
+        porcentagem_mecanico = servico.porcentagem_mecanico or 80
+        
+        # Calcular valor para o mecânico
+        valor_mecanico = (valor_total * porcentagem_mecanico) / 100
+        valor_loja = valor_total - valor_mecanico
+        
+        # Calcular valor das peças
+        valor_pecas = 0
+        for peca in servico.pecas:
+            valor_pecas += (peca.preco_unitario * peca.quantidade)
+        
+        # Adicionar em resumo
+        resumo['servicos_valor'] += valor_loja
+        resumo['pecas_valor'] += valor_pecas
+        
+        # Adicionar ao detalhe
+        mecanico = Mecanico.query.get(servico.mecanico_id)
+        servicos_detalhe.append({
+            'id': servico.id,
+            'descricao': servico.descricao,
+            'cliente': servico.cliente,
+            'data': servico.data_criacao.strftime('%Y-%m-%dT%H:%M:%S'),
+            'mecanico': mecanico.nome if mecanico else 'Não informado',
+            'valor_total': valor_total,
+            'valor_mecanico': valor_mecanico,
+            'valor_loja': valor_loja
+        })
+    
+    # Obter detalhe das peças
+    pecas_detalhe = []
+    for servico in servicos:
+        for peca in servico.pecas:
+            pecas_detalhe.append({
+                'id': peca.id,
+                'servico_id': servico.id,
+                'servico_descricao': servico.descricao,
+                'data': servico.data_criacao.strftime('%Y-%m-%dT%H:%M:%S'),
+                'descricao': peca.descricao,
+                'preco_unitario': peca.preco_unitario,
+                'quantidade': peca.quantidade,
+                'valor_total': peca.preco_unitario * peca.quantidade
+            })
+    
+    # Analisar movimentações
+    retiradas_detalhe = []
+    for mov in movimentacoes:
+        if mov.valor > 0:
+            # Receitas
+            if 'Serviço' in (mov.justificativa or ''):
+                # Já contabilizado em serviços
+                pass
+            elif 'peças' in (mov.justificativa or '').lower() or 'peça' in (mov.justificativa or '').lower():
+                # Já contabilizado em peças
+                pass
+            else:
+                resumo['outras_entradas'] += mov.valor
+        else:
+            # Despesas
+            valor_abs = abs(mov.valor)
+            if 'Pagamento' in (mov.justificativa or ''):
+                resumo['pagamentos_mecanicos'] += valor_abs
+            elif 'Retirada' in (mov.justificativa or ''):
+                resumo['retiradas'] += valor_abs
+                retiradas_detalhe.append({
+                    'id': mov.id,
+                    'data': mov.data.strftime('%Y-%m-%dT%H:%M:%S'),
+                    'valor': mov.valor,
+                    'descricao': mov.justificativa or 'Retirada'
+                })
+            else:
+                resumo['outros_gastos'] += valor_abs
+    
+    # Calcular totais
+    resumo['total_receitas'] = resumo['servicos_valor'] + resumo['pecas_valor'] + resumo['outras_entradas']
+    resumo['total_despesas'] = resumo['pagamentos_mecanicos'] + resumo['retiradas'] + resumo['outros_gastos']
+    resumo['lucro_liquido'] = resumo['total_receitas'] - resumo['total_despesas']
+    
+    return jsonify({
+        'success': True,
+        'resumo': resumo,
+        'servicos': servicos_detalhe,
+        'pecas': pecas_detalhe,
+        'retiradas': retiradas_detalhe
+    })
+
 @app.route('/carteira/loja', methods=['GET'])
 def carteira_loja():
     """Página da carteira da loja."""
