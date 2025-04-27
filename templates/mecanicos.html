@@ -55,9 +55,9 @@
                                 <button type="button" class="btn btn-sm btn-outline-primary">Editar</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary">Carteira</button>
                                 {% if mecanico.ativo %}
-                                <button type="button" class="btn btn-sm btn-outline-danger">Desativar</button>
+                                <a href="{{ url_for('desativar_mecanico', mecanico_id=mecanico.id) }}" class="btn btn-sm btn-outline-danger">Desativar</a>
                                 {% else %}
-                                <button type="button" class="btn btn-sm btn-outline-success">Ativar</button>
+                                <a href="{{ url_for('ativar_mecanico', mecanico_id=mecanico.id) }}" class="btn btn-sm btn-outline-success">Ativar</a>
                                 {% endif %}
                             </div>
                         </td>

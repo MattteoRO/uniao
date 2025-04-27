@@ -82,6 +82,32 @@ def mecanicos():
         
     return render_template('mecanicos.html', mecanicos=mecanicos, now=datetime.now())
 
+
+@app.route('/mecanicos/ativar/<int:mecanico_id>')
+def ativar_mecanico(mecanico_id):
+    from models_flask import Mecanico
+    
+    mecanico = Mecanico.query.get_or_404(mecanico_id)
+    if not mecanico.ativo:
+        mecanico.ativo = True
+        db.session.commit()
+        flash(f'Mecânico {mecanico.nome} ativado com sucesso!', 'success')
+    
+    return redirect(url_for('mecanicos'))
+
+
+@app.route('/mecanicos/desativar/<int:mecanico_id>')
+def desativar_mecanico(mecanico_id):
+    from models_flask import Mecanico
+    
+    mecanico = Mecanico.query.get_or_404(mecanico_id)
+    if mecanico.ativo:
+        mecanico.ativo = False
+        db.session.commit()
+        flash(f'Mecânico {mecanico.nome} desativado com sucesso!', 'success')
+    
+    return redirect(url_for('mecanicos'))
+
 @app.route('/servicos')
 def servicos():
     from models_flask import Servico, Mecanico
