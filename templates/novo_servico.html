@@ -61,16 +61,14 @@
             <h5 class="mb-3">Peças Utilizadas</h5>
             
             <div class="row mb-3">
-                <div class="col-12">
-                    <label for="busca_peca" class="form-label">Buscar Peça (Digite ID, código de barras ou descrição)</label>
+                <div class="col-md-9">
+                    <label for="busca_peca" class="form-label">Buscar Peça</label>
                     <input type="text" class="form-control" id="busca_peca" placeholder="Digite ID, código de barras ou parte da descrição..." autofocus>
-                    <small class="form-text text-muted">
-                        <ul class="mb-0 ps-3 mt-1">
-                            <li>Para buscar por <strong>ID</strong>: digite até 6 dígitos (ex: 1, 42)</li>
-                            <li>Para buscar por <strong>descrição</strong>: digite letras ou texto (ex: RODA, BIC)</li>
-                            <li>Para buscar por <strong>código de barras</strong>: digite números com 8 ou mais dígitos</li>
-                        </ul>
-                    </small>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-success w-100" id="btn_cadastro_manual">
+                        <i class="bi bi-plus-circle"></i> Cadastrar Manualmente
+                    </button>
                 </div>
             </div>
             
@@ -218,6 +216,51 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="btn_adicionar_peca">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para cadastro manual de peças -->
+<div class="modal fade" id="cadastroManualModal" tabindex="-1" aria-labelledby="cadastroManualModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="cadastroManualModalLabel">Cadastrar Peça Manualmente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="manual_id" class="form-label">ID/Código da Peça:</label>
+                    <input type="text" class="form-control" id="manual_id" placeholder="Opcional - Código de identificação">
+                </div>
+                <div class="mb-3">
+                    <label for="manual_descricao" class="form-label">Descrição da Peça*:</label>
+                    <input type="text" class="form-control" id="manual_descricao" placeholder="Ex: Roda aro 26" required>
+                </div>
+                <div class="mb-3">
+                    <label for="manual_preco" class="form-label">Preço Unitário (R$)*:</label>
+                    <input type="number" class="form-control" id="manual_preco" step="0.01" min="0" required>
+                </div>
+                <div class="mb-3">
+                    <label for="manual_quantidade" class="form-label">Quantidade*:</label>
+                    <input type="number" class="form-control" id="manual_quantidade" min="1" value="1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="manual_codigo_barras" class="form-label">Código de Barras:</label>
+                    <input type="text" class="form-control" id="manual_codigo_barras" placeholder="Opcional">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Valor Total:</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control" id="manual_valor_total" disabled>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn_salvar_peca_manual">Adicionar ao Serviço</button>
             </div>
         </div>
     </div>
