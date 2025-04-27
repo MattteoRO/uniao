@@ -1,5 +1,6 @@
 import os
 import time
+import hashlib
 from datetime import datetime
 from functools import wraps
 
@@ -7,6 +8,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired
 
 import filters
 
@@ -33,8 +37,86 @@ db.init_app(app)
 # Registro de filtros Jinja
 filters.init_app(app)
 
+# Definir o formulário de login
+class LoginForm(FlaskForm):
+    username = StringField('Usuário', validators=[DataRequired()])
+    password = PasswordField('Senha', validators=[DataRequired()])
+    submit = SubmitField('Entrar')
+
+# Credenciais de acesso padrão (usuário: 1, senha: 286)
+# A senha será armazenada como hash no sistema
+DEFAULT_USERNAME = "1"
+DEFAULT_PASSWORD = "286"
+
+# Função para verificar as credenciais
+def verificar_credenciais(username, password):
+    # Para fins de desenvolvimento, usamos credenciais fixas
+    # Em um sistema de produção, essas credenciais estariam em um banco de dados
+    return username == DEFAULT_USERNAME and password == DEFAULT_PASSWORD
+
+# Função para verificar se o usuário está autenticado
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'autenticado' not in session or not session['autenticado']:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Rotas de autenticação
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        
+        if verificar_credenciais(username, password):
+            session['autenticado'] = True
+            session['ultimo_acesso'] = time.time()
+            
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('index'))
+        else:
+            flash('Usuário ou senha incorretos!', 'danger')
+    
+    return render_template('login.html', form=form)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Você foi desconectado com sucesso!', 'success')
+    return redirect(url_for('login'))
+
+# Middleware para verificar tempo de inatividade
+@app.before_request
+def verificar_timeout():
+    # Ignorar verificação para as rotas de login e logout
+    if request.endpoint in ['login', 'logout', 'static']:
+        return
+    
+    # Verificar autenticação
+    if 'autenticado' not in session or not session['autenticado']:
+        return
+    
+    # Verificar inatividade (90 segundos)
+    ultimo_acesso = session.get('ultimo_acesso', 0)
+    now = time.time()
+    
+    if now - ultimo_acesso > 90:  # 90 segundos
+        session.clear()
+        flash('Sessão expirada por inatividade!', 'warning')
+        return redirect(url_for('login'))
+    
+    # Atualizar último acesso
+    session['ultimo_acesso'] = now
+
 # Rotas e visualizações
 @app.route('/')
+@login_required
 def index():
     from models_flask import Servico, Mecanico, Carteira
     from datetime import datetime
@@ -72,6 +154,7 @@ def index():
                           servicos_recentes=servicos_recentes)
 
 @app.route('/mecanicos', methods=['GET', 'POST'])
+@login_required
 def mecanicos():
     from models_flask import Mecanico, Carteira
     from datetime import datetime
@@ -117,6 +200,7 @@ def mecanicos():
 
 
 @app.route('/mecanicos/ativar/<int:mecanico_id>')
+@login_required
 def ativar_mecanico(mecanico_id):
     from models_flask import Mecanico
     
