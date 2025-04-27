@@ -1,69 +1,126 @@
 {% extends 'base.html' %}
 
-{% block title %}Cultural Brain Training - Home{% endblock %}
+{% block title %}Painel - Monark Motopeças{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 text-center">
-        <div class="card mb-4 bg-dark border-primary">
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 mb-4">Painel de Controle</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card bg-primary text-white h-100">
             <div class="card-body">
-                <h1 class="card-title display-4 mb-4">Cultural Brain Training</h1>
-                <p class="lead">Test your knowledge of world cultures with friends and family!</p>
-                <div class="d-grid gap-2 col-8 mx-auto mt-4">
-                    <a href="{{ url_for('new_game') }}" class="btn btn-primary btn-lg">Start New Game</a>
-                    <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary btn-lg">View Leaderboard</a>
-                </div>
+                <h5 class="card-title">Serviços Ativos</h5>
+                <p class="card-text display-6">{{ servicos_ativos|default(0) }}</p>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span>Ver Detalhes</span>
+                <a href="{{ url_for('servicos') }}" class="btn btn-outline-light btn-sm">Ver</a>
             </div>
         </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-4">
-                <div class="card h-100 bg-dark">
-                    <div class="card-body text-center">
-                        <h3 class="card-title">Learn</h3>
-                        <p class="card-text">Explore cultures from around the world through fun and challenging questions.</p>
-                    </div>
-                </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Mecânicos Ativos</h5>
+                <p class="card-text display-6">{{ mecanicos_ativos|default(0) }}</p>
             </div>
-            <div class="col-md-4">
-                <div class="card h-100 bg-dark">
-                    <div class="card-body text-center">
-                        <h3 class="card-title">Compete</h3>
-                        <p class="card-text">Challenge your friends to see who knows the most about global cultural traditions.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 bg-dark">
-                    <div class="card-body text-center">
-                        <h3 class="card-title">Explore</h3>
-                        <p class="card-text">Discover fascinating facts about art, food, history, and traditions worldwide.</p>
-                    </div>
-                </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span>Ver Detalhes</span>
+                <a href="{{ url_for('mecanicos') }}" class="btn btn-outline-light btn-sm">Ver</a>
             </div>
         </div>
-        
-        <div class="mt-5">
-            <h2>Featured Categories</h2>
-            <div class="row mt-3">
-                {% set categories = [
-                    {'name': 'Geography', 'icon': '🌏', 'desc': 'Natural wonders and landmarks'},
-                    {'name': 'History', 'icon': '📜', 'desc': 'Important events and historical figures'},
-                    {'name': 'Art', 'icon': '🎨', 'desc': 'Traditional arts and crafts'},
-                    {'name': 'Food', 'icon': '🍲', 'desc': 'Cuisines and cooking traditions'},
-                    {'name': 'Traditions', 'icon': '🎭', 'desc': 'Festivals and cultural practices'}
-                ] %}
-                
-                {% for category in categories %}
-                <div class="col-md-4 mb-3">
-                    <div class="card h-100 bg-dark">
-                        <div class="card-body">
-                            <h4 class="card-title">{{ category.icon }} {{ category.name }}</h4>
-                            <p class="card-text">{{ category.desc }}</p>
-                        </div>
-                    </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Carteira da Loja</h5>
+                <p class="card-text display-6">R$ {{ saldo_loja|default(0)|number_format(2, ',', '.') }}</p>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span>Ver Detalhes</span>
+                <a href="#" class="btn btn-outline-light btn-sm">Ver</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <h5 class="card-title">Serviços Concluídos</h5>
+                <p class="card-text display-6">{{ servicos_concluidos|default(0) }}</p>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span>Ver Detalhes</span>
+                <a href="{{ url_for('servicos') }}" class="btn btn-outline-light btn-sm">Ver</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-7 mb-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Serviços Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if servicos_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Mecânico</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for servico in servicos_recentes %}
+                            <tr>
+                                <td>{{ servico.id }}</td>
+                                <td>{{ servico.cliente }}</td>
+                                <td>{{ servico.mecanico.nome }}</td>
+                                <td>R$ {{ servico.valor_total|number_format(2, ',', '.') }}</td>
+                                <td>
+                                    <span class="badge {{ servico.status_badge }}">
+                                        {{ servico.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                {% endfor %}
+                {% else %}
+                <p class="text-muted">Nenhum serviço recente.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('servicos') }}" class="btn btn-primary">Ver Todos os Serviços</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5 mb-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-3">
+                    <a href="#" class="btn btn-lg btn-outline-primary">Novo Serviço</a>
+                    <a href="#" class="btn btn-lg btn-outline-secondary">Novo Mecânico</a>
+                    <a href="#" class="btn btn-lg btn-outline-success">Consultar Peças</a>
+                    <a href="{{ url_for('configuracoes') }}" class="btn btn-lg btn-outline-info">Configurações</a>
+                </div>
             </div>
         </div>
     </div>

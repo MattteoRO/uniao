@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Serviços - Monark Motopeças{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="display-5 mb-0">Serviços</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoServicoModal">
+            <i class="bi bi-plus-circle"></i> Novo Serviço
+        </button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Filtros</h5>
+    </div>
+    <div class="card-body">
+        <form id="filtroForm" method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="filtroStatus" class="form-label">Status</label>
+                <select class="form-select" id="filtroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="aberto">Aberto</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtroCliente" class="form-label">Cliente</label>
+                <input type="text" class="form-control" id="filtroCliente" name="cliente" placeholder="Nome do cliente">
+            </div>
+            <div class="col-md-4">
+                <label for="filtroMecanico" class="form-label">Mecânico</label>
+                <select class="form-select" id="filtroMecanico" name="mecanico_id">
+                    <option value="">Todos</option>
+                    {% for mecanico in mecanicos %}
+                    <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtroDataInicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="filtroDataInicio" name="data_inicio">
+            </div>
+            <div class="col-md-4">
+                <label for="filtroDataFim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="filtroDataFim" name="data_fim">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                <button type="reset" class="btn btn-secondary">Limpar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Lista de Serviços</h5>
+    </div>
+    <div class="card-body">
+        {% if servicos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Mecânico</th>
+                        <th>Data</th>
+                        <th>Valor Total</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for servico in servicos %}
+                    <tr>
+                        <td>{{ servico.id }}</td>
+                        <td>{{ servico.cliente }}</td>
+                        <td>{{ servico.mecanico.nome }}</td>
+                        <td>{{ servico.data_criacao.strftime('%d/%m/%Y') }}</td>
+                        <td>R$ {{ servico.valor_total|number_format(2, ',', '.') }}</td>
+                        <td>
+                            {% if servico.status == 'aberto' %}
+                            <span class="badge bg-primary">Aberto</span>
+                            {% elif servico.status == 'concluido' %}
+                            <span class="badge bg-success">Concluído</span>
+                            {% elif servico.status == 'cancelado' %}
+                            <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-primary">Detalhes</a>
+                                {% if servico.status == 'aberto' %}
+                                <button type="button" class="btn btn-sm btn-outline-success">Concluir</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary">PDF</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            Nenhum serviço encontrado. Clique em "Novo Serviço" para adicionar.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Novo Serviço -->
+<div class="modal fade" id="novoServicoModal" tabindex="-1" aria-labelledby="novoServicoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="novoServicoModalLabel">Novo Serviço</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="#" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cliente" class="form-label">Cliente*</label>
+                            <input type="text" class="form-control" id="cliente" name="cliente" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="telefone" class="form-label">Telefone*</label>
+                            <input type="text" class="form-control" id="telefone" name="telefone" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição da Mão de Obra*</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="mecanico_id" class="form-label">Mecânico Responsável*</label>
+                            <select class="form-select" id="mecanico_id" name="mecanico_id" required>
+                                <option value="">Selecione um mecânico</option>
+                                {% for mecanico in mecanicos %}
+                                <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="porcentagem_mecanico" class="form-label">Porcentagem do Mecânico*</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" min="0" max="100" value="50" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="valor_servico" class="form-label">Valor do Serviço (Mão de Obra)*</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" id="valor_servico" name="valor_servico" min="0.00" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted"><small>* Campos obrigatórios</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Continuar para Peças</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações - Monark Motopeças{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 mb-4">Configurações do Sistema</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Informações da Empresa</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('configuracoes') }}">
+            <div class="mb-3">
+                <label for="nome_empresa" class="form-label">Nome da Empresa</label>
+                <input type="text" class="form-control" id="nome_empresa" name="nome_empresa" value="{{ config.nome_empresa }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="endereco" class="form-label">Endereço</label>
+                <input type="text" class="form-control" id="endereco" name="endereco" value="{{ config.endereco }}">
+            </div>
+            <div class="mb-3">
+                <label for="telefone" class="form-label">Telefone</label>
+                <input type="text" class="form-control" id="telefone" name="telefone" value="{{ config.telefone }}">
+            </div>
+            <div class="mb-3">
+                <label for="caminho_csv" class="form-label">Caminho do Arquivo CSV de Peças</label>
+                <input type="text" class="form-control" id="caminho_csv" name="caminho_csv" value="{{ config.caminho_csv }}" required>
+                <div class="form-text">Este caminho permanecerá fixo até ser alterado manualmente.</div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Informações do Sistema</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Versão do Sistema</h6>
+                <p>1.0.0</p>
+                
+                <h6>Banco de Dados</h6>
+                <p>{{ db_info|default('PostgreSQL') }}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Diretórios de Relatórios</h6>
+                <ul class="list-group">
+                    <li class="list-group-item">Clientes: ./ser cliente</li>
+                    <li class="list-group-item">Mecânicos: ./ser mecanico</li>
+                    <li class="list-group-item">Loja: ./ser loja</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

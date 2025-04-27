@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Mecânicos - Monark Motopeças{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="display-5 mb-0">Mecânicos</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoMecanicoModal">
+            <i class="bi bi-plus-circle"></i> Novo Mecânico
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Lista de Mecânicos</h5>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="mostrarInativos" {% if request.args.get('mostrar_inativos') == 'true' %}checked{% endif %}>
+            <label class="form-check-label text-white" for="mostrarInativos">Mostrar Inativos</label>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if mecanicos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Data de Cadastro</th>
+                        <th>Saldo da Carteira</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mecanico in mecanicos %}
+                    <tr>
+                        <td>{{ mecanico.id }}</td>
+                        <td>{{ mecanico.nome }}</td>
+                        <td>{{ mecanico.telefone or 'Não informado' }}</td>
+                        <td>{{ mecanico.data_cadastro.strftime('%d/%m/%Y') }}</td>
+                        <td>R$ {{ mecanico.carteira.saldo|number_format(2, ',', '.') if mecanico.carteira else '0,00' }}</td>
+                        <td>
+                            {% if mecanico.ativo %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-primary">Editar</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary">Carteira</button>
+                                {% if mecanico.ativo %}
+                                <button type="button" class="btn btn-sm btn-outline-danger">Desativar</button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-success">Ativar</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            Nenhum mecânico cadastrado. Clique em "Novo Mecânico" para adicionar.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Novo Mecânico -->
+<div class="modal fade" id="novoMecanicoModal" tabindex="-1" aria-labelledby="novoMecanicoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="novoMecanicoModalLabel">Novo Mecânico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="#" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo*</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone">
+                    </div>
+                    <p class="text-muted"><small>* Campos obrigatórios</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // JavaScript para filtrar mecânicos inativos
+    document.getElementById('mostrarInativos').addEventListener('change', function() {
+        const mostrarInativos = this.checked;
+        window.location.href = "{{ url_for('mecanicos') }}?mostrar_inativos=" + (mostrarInativos ? 'true' : 'false');
+    });
+</script>
+{% endblock %}

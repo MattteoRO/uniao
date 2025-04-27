@@ -219,6 +219,27 @@ class ConfiguracoesTab(ttk.Frame):
         
         if filename:
             self.caminho_csv_var.set(filename)
+            
+            # Salvar imediatamente a configuração para persistir o caminho do CSV
+            try:
+                config = Configuracao.get() or {}
+                Configuracao.update(
+                    nome_empresa=config.get('nome_empresa', self.nome_empresa_var.get().strip()),
+                    endereco=config.get('endereco', self.endereco_var.get().strip()),
+                    telefone=config.get('telefone', self.telefone_var.get().strip()),
+                    caminho_csv=filename
+                )
+                messagebox.showinfo("Sucesso", f"Arquivo CSV definido como: {filename}\nO sistema usará este arquivo para buscar peças.")
+                
+                # Atualiza o CSV Manager na aba de serviço se disponível
+                if hasattr(self.main_window, 'servico_tab') and self.main_window.servico_tab is not None:
+                    from services.csv_manager import CSVManager
+                    self.main_window.servico_tab.csv_manager = CSVManager(filename)
+                    logger.info(f"CSV Manager atualizado para: {filename}")
+                
+            except Exception as e:
+                logger.error(f"Erro ao salvar caminho do CSV: {e}")
+                messagebox.showerror("Erro", f"Erro ao salvar caminho do CSV: {str(e)}")
     
     def browse_directory(self, var):
         """

@@ -85,6 +85,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS mecanicos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
+                telefone TEXT,
                 data_cadastro TEXT NOT NULL,
                 ativo INTEGER DEFAULT 1
             )
@@ -125,24 +126,22 @@ def init_db():
                 mecanico_id INTEGER NOT NULL,
                 valor_servico REAL NOT NULL,
                 porcentagem_mecanico REAL NOT NULL,
-                data_cadastro TEXT NOT NULL,
-                data_conclusao TEXT,
-                status TEXT DEFAULT 'em_andamento',
+                data_criacao TEXT NOT NULL,
+                status TEXT DEFAULT 'aberto',
                 FOREIGN KEY (mecanico_id) REFERENCES mecanicos(id)
             )
             ''')
             
             # Tabela de peças utilizadas nos serviços
             cursor.execute('''
-            CREATE TABLE IF NOT EXISTS pecas_servico (
+            CREATE TABLE IF NOT EXISTS servico_pecas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 servico_id INTEGER NOT NULL,
-                peca_id INTEGER NOT NULL,
+                peca_id TEXT NOT NULL,
                 descricao TEXT NOT NULL,
                 codigo_barras TEXT,
                 preco_unitario REAL NOT NULL,
                 quantidade INTEGER NOT NULL,
-                valor_total REAL NOT NULL,
                 FOREIGN KEY (servico_id) REFERENCES servicos(id)
             )
             ''')

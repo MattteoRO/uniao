@@ -28,9 +28,15 @@ class ServicoTab(ttk.Frame):
         super().__init__(parent)
         self.main_window = main_window
         self.servico = None
-        self.csv_manager = CSVManager()
+        # Obter o caminho do CSV das configurações
+        from models import Configuracao
+        config = Configuracao.get()
+        csv_path = "bdmonarkbd.csv"  # Valor padrão
+        if config and config['caminho_csv']:
+            csv_path = config['caminho_csv']
+        self.csv_manager = CSVManager(csv_path)
         self.setup_ui()
-        logger.debug("Aba Serviço inicializada")
+        logger.debug(f"Aba Serviço inicializada com CSV: {csv_path}")
     
     def setup_ui(self):
         """Configura a interface da aba Serviço."""

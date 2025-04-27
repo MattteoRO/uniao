@@ -8,8 +8,8 @@ Fornece funcionalidades para gerenciar as carteiras digitais de mecânicos e da 
 import logging
 from datetime import datetime
 
-from models import Carteira, Mecanico
-from utils.formatters import format_currency, format_date
+from database import execute_query
+from models import Carteira
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class CarteiraService:
     
     def __init__(self):
         """Inicializa o serviço de carteira digital."""
-        logger.debug("Serviço de carteira digital inicializado")
+        pass
     
     def get_carteira_loja(self):
         """
@@ -31,20 +31,20 @@ class CarteiraService:
             dict: Dados da carteira da loja
         """
         try:
-            carteira = Carteira.get_loja_carteira()
+            query = "SELECT * FROM carteiras WHERE tipo = 'loja' LIMIT 1"
+            result = execute_query(query, fetch_one=True)
             
-            if not carteira:
-                # Se não existir, cria a carteira da loja
-                logger.warning("Carteira da loja não encontrada, criando uma nova")
-                carteira_obj = Carteira(tipo='loja', mecanico_id=None, saldo=0.0)
-                carteira_obj.save()
-                carteira = Carteira.get_loja_carteira()
-                
-            return carteira
+            if not result:
+                # Cria a carteira da loja se não existir
+                carteira_id = Carteira.create('loja')
+                if carteira_id:
+                    return self.get_carteira_by_id(carteira_id)
+                return None
             
+            return result
         except Exception as e:
             logger.error(f"Erro ao obter carteira da loja: {e}")
-            raise
+            return None
     
     def get_carteira_mecanico(self, mecanico_id):
         """
@@ -57,11 +57,44 @@ class CarteiraService:
             dict: Dados da carteira do mecânico ou None se não existir
         """
         try:
-            return Carteira.get_by_mecanico(mecanico_id)
+            query = "SELECT * FROM carteiras WHERE tipo = 'mecanico' AND mecanico_id = ? LIMIT 1"
+            result = execute_query(query, (mecanico_id,), fetch_one=True)
             
+            if not result:
+                # Cria a carteira do mecânico se não existir
+                carteira_id = self.create_carteira_mecanico(mecanico_id)
+                if carteira_id:
+                    return self.get_carteira_by_id(carteira_id)
+                return None
+            
+            return result
         except Exception as e:
-            logger.error(f"Erro ao obter carteira do mecânico {mecanico_id}: {e}")
-            raise
+            logger.error(f"Erro ao obter carteira do mecânico ID={mecanico_id}: {e}")
+            return None
+    
+    def get_carteira_by_id(self, carteira_id):
+        """
+        Obtém uma carteira pelo ID.
+        
+        Args:
+            carteira_id (int): ID da carteira
+            
+        Returns:
+            dict: Dados da carteira ou None se não existir
+        """
+        try:
+            query = """
+                SELECT c.*, m.nome as mecanico_nome
+                FROM carteiras c
+                LEFT JOIN mecanicos m ON c.mecanico_id = m.id
+                WHERE c.id = ?
+            """
+            
+            result = execute_query(query, (carteira_id,), fetch_one=True)
+            return result
+        except Exception as e:
+            logger.error(f"Erro ao obter carteira ID={carteira_id}: {e}")
+            return None
     
     def get_todas_carteiras(self):
         """
@@ -71,28 +104,18 @@ class CarteiraService:
             list: Lista de dicionários com dados das carteiras
         """
         try:
-            # Carteira da loja
-            carteiras = []
-            carteira_loja = self.get_carteira_loja()
-            if carteira_loja:
-                carteira_loja = dict(carteira_loja)
-                carteira_loja['nome'] = 'Loja'
-                carteiras.append(carteira_loja)
+            query = """
+                SELECT c.*, m.nome as mecanico_nome
+                FROM carteiras c
+                LEFT JOIN mecanicos m ON c.mecanico_id = m.id
+                ORDER BY c.tipo DESC, m.nome
+            """
             
-            # Carteiras dos mecânicos
-            mecanicos = Mecanico.get_all()
-            for mecanico in mecanicos:
-                carteira = Carteira.get_by_mecanico(mecanico['id'])
-                if carteira:
-                    carteira = dict(carteira)
-                    carteira['nome'] = mecanico['nome']
-                    carteiras.append(carteira)
-            
-            return carteiras
-            
+            result = execute_query(query, fetch_all=True)
+            return result
         except Exception as e:
             logger.error(f"Erro ao obter todas as carteiras: {e}")
-            raise
+            return []
     
     def get_extrato(self, carteira_id, data_inicio=None, data_fim=None):
         """
@@ -107,28 +130,30 @@ class CarteiraService:
             list: Lista de movimentações
         """
         try:
-            carteira = Carteira.get_by_id(carteira_id)
+            query = """
+                SELECT m.*, s.cliente
+                FROM movimentacoes m
+                LEFT JOIN servicos s ON m.servico_id = s.id
+                WHERE m.carteira_id = ?
+            """
             
-            if not carteira:
-                logger.warning(f"Carteira {carteira_id} não encontrada")
-                return []
+            params = [carteira_id]
             
-            carteira_obj = Carteira(**dict(carteira))
-            movimentacoes = carteira_obj.get_extrato(data_inicio, data_fim)
+            if data_inicio:
+                query += " AND DATE(m.data) >= DATE(?)"
+                params.append(data_inicio)
             
-            # Formatação adicional para o extrato
-            extrato_formatado = []
-            for mov in movimentacoes:
-                mov_dict = dict(mov)
-                mov_dict['data_formatada'] = format_date(mov['data'])
-                mov_dict['valor_formatado'] = format_currency(mov['valor'])
-                extrato_formatado.append(mov_dict)
+            if data_fim:
+                query += " AND DATE(m.data) <= DATE(?)"
+                params.append(data_fim)
             
-            return extrato_formatado
+            query += " ORDER BY m.data DESC"
             
+            result = execute_query(query, params, fetch_all=True)
+            return result
         except Exception as e:
-            logger.error(f"Erro ao obter extrato da carteira {carteira_id}: {e}")
-            raise
+            logger.error(f"Erro ao obter extrato da carteira ID={carteira_id}: {e}")
+            return []
     
     def registrar_movimentacao(self, carteira_id, valor, justificativa=None, servico_id=None):
         """
@@ -146,32 +171,75 @@ class CarteiraService:
         try:
             # Validações
             if valor == 0:
-                logger.warning("Tentativa de registrar movimentação com valor zero")
-                return False
+                raise ValueError("O valor da movimentação não pode ser zero.")
             
             if valor < 0 and not justificativa:
-                logger.error("Tentativa de registrar saída sem justificativa")
-                raise ValueError("Justificativa é obrigatória para saídas de valor")
+                raise ValueError("É necessário informar uma justificativa para saídas de valor.")
             
-            # Obtém a carteira
-            carteira = Carteira.get_by_id(carteira_id)
+            # Obtém o saldo atual
+            saldo_atual = Carteira.get_saldo(carteira_id)
             
-            if not carteira:
-                logger.error(f"Carteira {carteira_id} não encontrada")
-                raise ValueError(f"Carteira ID={carteira_id} não encontrada")
+            if saldo_atual is None:
+                raise ValueError(f"Carteira ID={carteira_id} não encontrada.")
             
-            # Cria objeto da carteira
-            carteira_obj = Carteira(**dict(carteira))
+            # Verifica se há saldo suficiente para saídas
+            if valor < 0 and (saldo_atual + valor) < 0:
+                raise ValueError("Saldo insuficiente para esta operação.")
             
-            # Registra a movimentação
-            carteira_obj.adicionar_movimentacao(valor, justificativa, servico_id)
+            # Insere a movimentação
+            query = """
+                INSERT INTO movimentacoes (carteira_id, valor, justificativa, data, servico_id)
+                VALUES (?, ?, ?, ?, ?)
+            """
             
-            logger.info(f"Movimentação registrada: Carteira={carteira_id}, Valor={valor}, Justificativa={justificativa}")
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            execute_query(
+                query, 
+                (carteira_id, valor, justificativa, now, servico_id),
+                commit=True
+            )
+            
+            # Atualiza o saldo da carteira
+            novo_saldo = saldo_atual + valor
+            Carteira.update_saldo(carteira_id, novo_saldo)
+            
+            logger.info(f"Movimentação registrada: Carteira ID={carteira_id}, Valor={valor}, Novo Saldo={novo_saldo}")
             return True
             
         except Exception as e:
             logger.error(f"Erro ao registrar movimentação: {e}")
-            raise
+            return False
+    
+    def create_carteira_mecanico(self, mecanico_id, saldo_inicial=0.0):
+        """
+        Cria uma carteira para um mecânico.
+        
+        Args:
+            mecanico_id (int): ID do mecânico
+            saldo_inicial (float): Saldo inicial da carteira
+            
+        Returns:
+            int: ID da carteira criada ou None em caso de erro
+        """
+        try:
+            # Verifica se o mecânico já tem uma carteira
+            query = "SELECT id FROM carteiras WHERE tipo = 'mecanico' AND mecanico_id = ?"
+            result = execute_query(query, (mecanico_id,), fetch_one=True)
+            
+            if result:
+                logger.warning(f"Mecânico ID={mecanico_id} já possui uma carteira (ID={result['id']})")
+                return result['id']
+            
+            # Cria a carteira
+            carteira_id = Carteira.create('mecanico', mecanico_id, saldo_inicial)
+            
+            logger.info(f"Carteira criada para o mecânico ID={mecanico_id}: Carteira ID={carteira_id}")
+            return carteira_id
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar carteira para mecânico ID={mecanico_id}: {e}")
+            return None
     
     def get_resumo_carteiras(self):
         """
@@ -181,27 +249,36 @@ class CarteiraService:
             dict: Dicionário com resumo dos saldos
         """
         try:
-            # Todas as carteiras
-            carteiras = self.get_todas_carteiras()
+            # Saldo total da loja
+            query_loja = """
+                SELECT SUM(saldo) as saldo_total
+                FROM carteiras 
+                WHERE tipo = 'loja'
+            """
             
-            # Agrupamento e totais
-            resumo = {
-                'carteiras': carteiras,
-                'total_loja': 0.0,
-                'total_mecanicos': 0.0,
-                'total_geral': 0.0
+            result_loja = execute_query(query_loja, fetch_one=True)
+            saldo_loja = float(result_loja['saldo_total']) if result_loja and result_loja['saldo_total'] else 0.0
+            
+            # Saldo total dos mecânicos
+            query_mecanicos = """
+                SELECT SUM(saldo) as saldo_total
+                FROM carteiras 
+                WHERE tipo = 'mecanico'
+            """
+            
+            result_mecanicos = execute_query(query_mecanicos, fetch_one=True)
+            saldo_mecanicos = float(result_mecanicos['saldo_total']) if result_mecanicos and result_mecanicos['saldo_total'] else 0.0
+            
+            return {
+                'saldo_loja': saldo_loja,
+                'saldo_mecanicos': saldo_mecanicos,
+                'saldo_total': saldo_loja + saldo_mecanicos
             }
             
-            for carteira in carteiras:
-                if carteira['tipo'] == 'loja':
-                    resumo['total_loja'] += carteira['saldo']
-                else:
-                    resumo['total_mecanicos'] += carteira['saldo']
-                    
-                resumo['total_geral'] += carteira['saldo']
-            
-            return resumo
-            
         except Exception as e:
-            logger.error(f"Erro ao obter resumo das carteiras: {e}")
-            raise
+            logger.error(f"Erro ao obter resumo de carteiras: {e}")
+            return {
+                'saldo_loja': 0.0,
+                'saldo_mecanicos': 0.0,
+                'saldo_total': 0.0
+            }
