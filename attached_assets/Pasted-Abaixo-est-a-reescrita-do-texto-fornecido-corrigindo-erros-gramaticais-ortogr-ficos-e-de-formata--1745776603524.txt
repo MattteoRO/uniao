@@ -1,0 +1,186 @@
+Abaixo está a reescrita do texto fornecido, corrigindo erros gramaticais, ortográficos e de formatação, além de melhorar a clareza e a organização para torná-lo mais fluido e compreensível. A estrutura foi mantida, mas o conteúdo foi ajustado para maior precisão e consistência.
+
+---
+
+Desejo desenvolver um sistema em Python totalmente gratuito, que rodará localmente em uma máquina com sistema operacional Windows e poderá ser utilizado posteriormente em qualquer outra máquina. O sistema deve possuir um banco de dados local e será um gerenciador de serviços para a minha loja, Monark Motopeças e Bicicletaria. Abaixo, detalho as funcionalidades esperadas.
+
+### Estrutura Geral do Sistema
+O sistema terá uma interface com as seguintes abas:
+- **Painel**: Contém o menu principal com as opções: **Serviço**, **Mecânico**, **Configurações** e **Relatórios**.
+  - Ao clicar em **Serviço**, será exibida a opção **Novo Serviço**, que abrirá uma página para cadastrar um novo serviço.
+
+### Aba Novo Serviço
+A página de cadastro de um novo serviço conterá os seguintes campos:
+
+1. **Cliente**:
+   - Campo de preenchimento obrigatório.
+   - Aceita o nome completo do cliente.
+
+2. **Telefone**:
+   - Campo obrigatório.
+   - Formato: DDD + número (ex.: 69912345678, onde 69 é o DDD de Rondônia e 91234-5678 é o número do assinante).
+   - Não é restrito a números de Rondônia; o exemplo serve apenas para ilustrar o formato.
+   - Validação: Deve conter apenas números, com DDD (2 dígitos) e número (8 ou 9 dígitos).
+
+3. **Descrição da Mão de Obra**:
+   - Campo de texto com limite de 500 caracteres, incluindo espaços.
+   - Todo o texto digitado será automaticamente convertido para letras maiúsculas.
+
+4. **Mecânico Responsável pelo Serviço**:
+   - Campo com uma lista suspensa (dropdown) que exibe apenas os mecânicos cadastrados na aba **Mecânico**.
+   - O cadastro de mecânicos deve ser feito previamente na aba correspondente.
+
+5. **Valor do Serviço**:
+   - Campo numérico para inserir o valor do serviço em reais (ex.: 100.00).
+   - Ao clicar no campo, qualquer texto de exemplo ou placeholder é removido, permitindo a digitação do valor.
+   - Validação: Deve aceitar apenas números positivos com até duas casas decimais.
+
+6. **Porcentagem do Mecânico**:
+   - Campo para definir a porcentagem da mão de obra destinada ao mecânico (de 0% a 100%).
+   - Integração com carteiras digitais:
+     - Para cada serviço, o sistema calcula automaticamente o valor destinado ao mecânico com base na porcentagem informada. Exemplo: Em um serviço de R$ 100,00 com 80% para o mecânico, R$ 80,00 são creditados na carteira digital do mecânico, e R$ 20,00 são registrados na carteira digital da loja.
+     - **Carteiras Digitais**:
+       - Cada mecânico e a loja possuem carteiras digitais individuais.
+       - As carteiras registram entradas (valores de serviços) e saídas (retiradas de valores).
+       - Para saídas, o usuário deve informar:
+         - Valor (negativo, ex.: -500.00).
+         - Justificativa detalhada.
+         - Data da ocorrência.
+       - Cada carteira oferece um extrato detalhado com:
+         - Histórico de entradas (valores de serviços, com data).
+         - Histórico de saídas (valor, justificativa e data).
+         - Saldo atual.
+       - O sistema garante transparência e rastreabilidade de todas as movimentações financeiras.
+
+7. **Peças Usadas no Serviço**:
+   - Inclui uma caixa de pesquisa que busca peças no arquivo `bdmonarkbd.csv`, localizado na raiz do sistema.
+   - O campo de pesquisa permite adicionar peças ao serviço com base em critérios específicos, detalhados abaixo.
+
+### Estrutura do Arquivo CSV (`bdmonarkbd.csv`)
+O arquivo CSV contém as seguintes colunas:
+- **ID**: Identificador numérico da peça ou serviço (até 6 dígitos).
+- **DESCRICAO**: Descrição textual da peça ou serviço.
+- **PRECOVENDA**: Preço de venda, formatado como string (ex.: "1,00" ou "1.700,00").
+- **CODBARRAS**: Código de barras (número de até 13 dígitos) ou "NULL" se não houver.
+
+Exemplo de conteúdo:
+```
+ID,DESCRICAO,PRECOVENDA,CODBARRAS
+1,SERVICO MÃO DE OBRA,"1,00",NULL
+2,BIC GTM 29 AL CXR 21V F.MEC BCO/VERM,"1.700,00",7800000000023
+3,BIC GTM 29 AL CXR 21V F.MEC PTO/VERD,"1.700,00",7800000000030
+```
+
+### Lógica de Pesquisa de Peças
+O campo de pesquisa realiza buscas no CSV com base na entrada do usuário, retornando as colunas `ID`, `DESCRICAO`, `PRECOVENDA` e `CODBARRAS`. A lógica é a seguinte:
+
+1. **Entrada com apenas números e até 6 dígitos**:
+   - Busca na coluna `ID`.
+   - A entrada é tratada como número inteiro.
+   - Retorna a linha onde `ID` corresponde exatamente à entrada.
+   - Exemplo: Entrada `2` retorna a linha com `ID=2`.
+
+2. **Entrada com letras (ou números misturados com letras)**:
+   - Busca na coluna `DESCRICAO`.
+   - A busca é insensível a maiúsculas/minúsculas e procura correspondências parciais (substrings).
+   - Retorna todas as linhas onde `DESCRICAO` contém a entrada.
+   - Exemplo: Entrada `BIC GTM` retorna linhas com "BIC GTM" na descrição.
+
+3. **Entrada com apenas números e mais de 8 dígitos**:
+   - Busca na coluna `CODBARRAS`.
+   - A entrada é tratada como número inteiro.
+   - Retorna a linha onde `CODBARRAS` corresponde exatamente à entrada (ignora linhas com `CODBARRAS="NULL"`).
+   - Exemplo: Entrada `7800000000023` retorna a linha com `CODBARRAS=7800000000023`.
+
+4. **Múltiplas Correspondências**:
+   - Se houver mais de uma correspondência, todas são exibidas em uma lista ou tabela.
+   - Se não houver correspondências, o sistema exibe uma mensagem de erro informando que nenhum resultado foi encontrado.
+
+### Exibição e Adição de Peças
+- **Exibição**:
+  - Cada resultado da busca exibe `ID`, `DESCRICAO`, `PRECOVENDA` e `CODBARRAS`.
+  - Ao lado de cada peça, há um botão ou opção para adicioná-la à lista de peças do serviço.
+- **Adição de Peças**:
+  - Ao adicionar uma peça:
+    - Os dados (`ID`, `DESCRICAO`, `PRECOVENDA`, `CODBARRAS`) são transferidos para a lista de peças.
+    - `PRECOVENDA` é convertido de string para float (ex.: "1.700,00" → 1700.00).
+    - O usuário informa a quantidade (padrão: 1, mínimo: 1).
+  - Cálculo do valor total:
+    - Valor total = quantidade × `PRECOVENDA` (ou preço alterado, se aplicável).
+    - Exemplo: Peça com `PRECOVENDA="1.700,00"`, quantidade 2 → valor total = 3400.00.
+    - O sistema soma os valores totais de todas as peças para calcular o total do serviço.
+  - Edição de preço:
+    - O usuário pode manter o preço original ou alterá-lo.
+    - Se alterado, o novo preço é usado para cálculos.
+    - A alteração pode ser sincronizada com o CSV (detalhado abaixo).
+  - Exibição na lista de peças:
+    - Cada peça mostra: `DESCRICAO`, quantidade, preço unitário (original ou alterado) e valor total.
+    - O usuário pode remover peças ou ajustar quantidades, atualizando o valor total automaticamente.
+
+### Sincronização com o CSV
+- Se o preço de uma peça for alterado, o sistema oferece a opção de atualizar a coluna `PRECOVENDA` no CSV.
+- Processo:
+  - Localiza a linha no CSV usando o `ID` da peça.
+  - Atualiza `PRECOVENDA` com o novo preço (formatado como string, ex.: 1700.00 → "1.700,00").
+  - Regrava o CSV, mantendo as demais linhas inalteradas.
+- A sincronização é opcional e requer confirmação do usuário.
+
+### Validações e Tratamento de Erros
+- **Entrada Inválida**:
+  - Entradas de 7 ou 8 dígitos retornam uma mensagem de erro ou lista vazia.
+- **Quantidade Inválida**:
+  - Deve ser um número inteiro positivo (mínimo: 1); caso contrário, exibe erro.
+- **Preço Inválido**:
+  - Deve ser um número positivo; entradas inválidas solicitam correção.
+- **CSV Inacessível**:
+  - Se o arquivo CSV não estiver disponível ou tiver formato incorreto, o sistema exibe um erro e impede a adição de peças.
+
+### Relatórios e Exportação de PDF
+Antes de salvar o serviço (que será registrado na aba **Relatórios**), o usuário pode gerar três tipos de relatórios em PDF:
+- **Relatório do Cliente**:
+  - Formato: Recibo (80 mm x 200 mm).
+  - Conteúdo:
+    - Título: "AUTORIZAÇÃO DE SERVIÇO {código}".
+    - Dados: Nome do cliente, telefone, mecânico, data, descrição do serviço.
+    - Tabela de valores: Valor do serviço, valor das peças, valor total.
+    - Tabela de peças: Descrição, quantidade, valor total por peça.
+  - Salvamento: Arquivo salvo na pasta `ser cliente` (na raiz do sistema).
+  - Abertura: O PDF é aberto automaticamente após a geração.
+- **Relatório do Mecânico**:
+  - Conteúdo sugerido:
+    - Lista de serviços realizados por um mecânico.
+    - Inclui código do serviço, descrição, data, valor do serviço e valor atribuído ao mecânico (baseado na porcentagem).
+    - Soma total dos valores ganhos pelo mecânico.
+  - Salvamento: Arquivo salvo na pasta `ser mecanico`.
+  - Abertura: O PDF é aberto automaticamente.
+- **Relatório da Loja**:
+  - Conteúdo sugerido:
+    - Resumo financeiro de todos os serviços.
+    - Inclui código do serviço, data, valor total, peças vendidas e receita total.
+    - Possível filtro por período (diário, semanal, mensal).
+  - Salvamento: Arquivo salvo na pasta `ser loja`.
+  - Abertura: O PDF é aberto automaticamente.
+- **Seleção do Tipo de Relatório**:
+  - Uma lista suspensa permite escolher o tipo de PDF (Cliente, Mecânico ou Loja) antes da geração.
+- **Exportação**:
+  - Usa a biblioteca `ReportLab` para criar PDFs.
+  - Os arquivos são salvos automaticamente nos diretórios correspondentes (`ser cliente`, `ser mecanico`, `ser loja`).
+  - Após a geração, o PDF é aberto no visualizador padrão do sistema.
+
+### Funcionalidades Adicionais
+- **Aba Mecânico**:
+  - Permite cadastrar, editar e remover mecânicos.
+  - Cada mecânico tem um nome e uma carteira digital associada.
+- **Aba Configurações**:
+  - Permite ajustar configurações gerais do sistema (ex.: caminho do CSV, formato de data).
+- **Aba Relatórios**:
+  - Exibe o histórico de serviços salvos.
+  - Permite visualizar ou reimprimir PDFs gerados anteriormente.
+
+### Requisitos Técnicos
+- O sistema deve ser portátil, funcionando em qualquer máquina Windows sem dependências externas pagas.
+- Banco de dados local (ex.: SQLite) para armazenar serviços, mecânicos e carteiras digitais.
+- Interface gráfica amigável, usando uma biblioteca gratuita como `PySide6` ou `Tkinter`.
+- O arquivo `bdmonarkbd.csv` deve ser lido e atualizado diretamente do sistema.
+
+---
