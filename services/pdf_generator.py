@@ -233,7 +233,7 @@ class PDFGenerator:
     
     def gerar_pdf_mecanico(self, servico, config=None):
         """
-        Gera PDF para o mecânico (tamanho A4).
+        Gera PDF para o mecânico (tamanho 80mm x extrato).
         
         Args:
             servico (dict): Dados do serviço
@@ -249,14 +249,14 @@ class PDFGenerator:
             codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
             filepath = os.path.join(self.mecanico_dir, f"servico_{codigo_servico}_mecanico.pdf")
         
-        # Criar documento tamanho A4
+        # Criar documento tamanho 80mm x extrato
         doc = SimpleDocTemplate(
             filepath,
-            pagesize=A4,
-            rightMargin=20*mm,
-            leftMargin=20*mm,
-            topMargin=20*mm,
-            bottomMargin=20*mm
+            pagesize=(80*mm, 297*mm),  # Largura 80mm, altura da página A4
+            rightMargin=5*mm,
+            leftMargin=5*mm,
+            topMargin=10*mm,
+            bottomMargin=10*mm
         )
         
         # Estilos
@@ -264,15 +264,23 @@ class PDFGenerator:
         styles.add(ParagraphStyle(
             name='Center',
             alignment=TA_CENTER,
+            fontSize=9,
         ))
         styles.add(ParagraphStyle(
             name='TitleMecanico',
             parent=styles['Heading1'],
             alignment=TA_CENTER,
+            fontSize=12,
         ))
         styles.add(ParagraphStyle(
             name='Right',
             alignment=TA_RIGHT,
+            fontSize=8,
+        ))
+        styles.add(ParagraphStyle(
+            name='SmallNormal',
+            parent=styles['Normal'],
+            fontSize=8,
         ))
         
         # Conteúdo do documento
@@ -288,17 +296,17 @@ class PDFGenerator:
         else:
             elements.append(Paragraph("<b>Monark Motopeças e Bicicletaria</b>", styles["TitleMecanico"]))
         
-        elements.append(Spacer(1, 10*mm))
+        elements.append(Spacer(1, 5*mm))
         
         # Título do documento
         codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
         if servico['id'] == 0:  # Preview
             codigo_servico = "PREVIEW"
             
-        elements.append(Paragraph(f"<b>RELATÓRIO DE SERVIÇO PARA MECÂNICO - {codigo_servico}</b>", styles["TitleMecanico"]))
+        elements.append(Paragraph(f"<b>RELATÓRIO PARA MECÂNICO - {codigo_servico}</b>", styles["TitleMecanico"]))
         elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
         
-        elements.append(Spacer(1, 10*mm))
+        elements.append(Spacer(1, 5*mm))
         
         # Dados do serviço
         data = [
@@ -308,18 +316,19 @@ class PDFGenerator:
             ["Data:", data_atual],
         ]
         
-        t = Table(data, colWidths=[50*mm, 100*mm])
+        t = Table(data, colWidths=[25*mm, 45*mm])
         t.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         
         elements.append(Spacer(1, 5*mm))
         
         # Descrição do serviço
-        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["Normal"]))
-        elements.append(Paragraph(servico['descricao'], styles["Normal"]))
+        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
         
         elements.append(Spacer(1, 5*mm))
         
@@ -335,17 +344,18 @@ class PDFGenerator:
             ["Valor a Receber:", f"R$ {valor_mecanico:.2f}".replace('.', ',')],
         ]
         
-        t = Table(data, colWidths=[100*mm, 50*mm])
+        t = Table(data, colWidths=[45*mm, 25*mm])
         t.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.black),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         
-        elements.append(Spacer(1, 20*mm))
+        elements.append(Spacer(1, 10*mm))
         
         # Assinaturas
         data = [
@@ -353,10 +363,11 @@ class PDFGenerator:
             ["Mecânico", "Responsável"],
         ]
         
-        t = Table(data, colWidths=[75*mm, 75*mm])
+        t = Table(data, colWidths=[35*mm, 35*mm])
         t.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         
@@ -367,7 +378,7 @@ class PDFGenerator:
     
     def gerar_pdf_loja(self, servico, config=None):
         """
-        Gera PDF para a loja (tamanho A4).
+        Gera PDF para a loja (tamanho 80mm x extrato).
         
         Args:
             servico (dict): Dados do serviço
@@ -383,14 +394,14 @@ class PDFGenerator:
             codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
             filepath = os.path.join(self.loja_dir, f"servico_{codigo_servico}_loja.pdf")
         
-        # Criar documento tamanho A4
+        # Criar documento tamanho 80mm x extrato
         doc = SimpleDocTemplate(
             filepath,
-            pagesize=A4,
-            rightMargin=20*mm,
-            leftMargin=20*mm,
-            topMargin=20*mm,
-            bottomMargin=20*mm
+            pagesize=(80*mm, 297*mm),  # Largura 80mm, altura da página A4
+            rightMargin=5*mm,
+            leftMargin=5*mm,
+            topMargin=10*mm,
+            bottomMargin=10*mm
         )
         
         # Estilos
@@ -398,15 +409,23 @@ class PDFGenerator:
         styles.add(ParagraphStyle(
             name='Center',
             alignment=TA_CENTER,
+            fontSize=9,
         ))
         styles.add(ParagraphStyle(
             name='TitleLoja',
             parent=styles['Heading1'],
             alignment=TA_CENTER,
+            fontSize=12,
         ))
         styles.add(ParagraphStyle(
             name='Right',
             alignment=TA_RIGHT,
+            fontSize=8,
+        ))
+        styles.add(ParagraphStyle(
+            name='SmallNormal',
+            parent=styles['Normal'],
+            fontSize=8,
         ))
         
         # Conteúdo do documento
@@ -422,17 +441,17 @@ class PDFGenerator:
         else:
             elements.append(Paragraph("<b>Monark Motopeças e Bicicletaria</b>", styles["TitleLoja"]))
         
-        elements.append(Spacer(1, 10*mm))
+        elements.append(Spacer(1, 5*mm))
         
         # Título do documento
         codigo_servico = f"{servico['mecanico_nome'][0].upper()}{servico['id']}" if servico['mecanico_nome'] else f"S{servico['id']}"
         if servico['id'] == 0:  # Preview
             codigo_servico = "PREVIEW"
             
-        elements.append(Paragraph(f"<b>RELATÓRIO FINANCEIRO - SERVIÇO {codigo_servico}</b>", styles["TitleLoja"]))
+        elements.append(Paragraph(f"<b>RELATÓRIO FINANCEIRO - {codigo_servico}</b>", styles["TitleLoja"]))
         elements.append(Paragraph(f"Data: {data_atual}", styles["Center"]))
         
-        elements.append(Spacer(1, 10*mm))
+        elements.append(Spacer(1, 5*mm))
         
         # Dados do serviço
         data = [
@@ -442,28 +461,29 @@ class PDFGenerator:
             ["Data:", data_atual],
         ]
         
-        t = Table(data, colWidths=[50*mm, 100*mm])
+        t = Table(data, colWidths=[25*mm, 45*mm])
         t.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         
         elements.append(Spacer(1, 5*mm))
         
         # Descrição do serviço
-        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["Normal"]))
-        elements.append(Paragraph(servico['descricao'], styles["Normal"]))
+        elements.append(Paragraph("<b>Descrição do Serviço:</b>", styles["SmallNormal"]))
+        elements.append(Paragraph(servico['descricao'], styles["SmallNormal"]))
         
         elements.append(Spacer(1, 5*mm))
         
         # Tabela de peças
         if servico['pecas'] and len(servico['pecas']) > 0:
-            elements.append(Paragraph("<b>Peças Utilizadas:</b>", styles["Normal"]))
+            elements.append(Paragraph("<b>Peças Utilizadas:</b>", styles["SmallNormal"]))
             
             # Cabeçalho da tabela
             data = [
-                ["ID", "Descrição", "Código de Barras", "Preço Unit.", "Quant.", "Total"]
+                ["ID", "Descrição", "Preço", "Qtd", "Total"]
             ]
             
             # Adicionar linhas de peças
@@ -475,7 +495,6 @@ class PDFGenerator:
                 data.append([
                     peca.get('peca_id', 'N/A'),
                     peca.get('descricao', 'N/A'),
-                    peca.get('codigo_barras', ''),
                     f"R$ {valor_unitario:.2f}".replace('.', ','),
                     str(quantidade),
                     f"R$ {total:.2f}".replace('.', ',')
@@ -486,29 +505,29 @@ class PDFGenerator:
                 "",
                 "",
                 "",
-                "",
                 "<b>TOTAL:</b>",
                 f"<b>R$ {servico['valor_total_pecas']:.2f}</b>".replace('.', ',')
             ])
             
             # Criar tabela
-            colWidths = [20*mm, 60*mm, 25*mm, 25*mm, 15*mm, 25*mm]
+            colWidths = [12*mm, 21*mm, 15*mm, 10*mm, 17*mm]
             t = Table(data, colWidths=colWidths)
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
                 ('GRID', (0, 0), (-1, -2), 0.5, colors.black),
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-                ('ALIGN', (3, 0), (5, -1), 'RIGHT'),
-                ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+                ('ALIGN', (2, 0), (4, -1), 'RIGHT'),
+                ('ALIGN', (3, 0), (3, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTNAME', (4, -1), (5, -1), 'Helvetica-Bold'),
-                ('SPAN', (0, -1), (3, -1)),
+                ('FONTNAME', (3, -1), (4, -1), 'Helvetica-Bold'),
+                ('SPAN', (0, -1), (2, -1)),
                 ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 0), (-1, -1), 7),
             ]))
             elements.append(t)
             
-            elements.append(Spacer(1, 10*mm))
+            elements.append(Spacer(1, 5*mm))
         
         # Cálculo de valores
         valor_servico = float(servico.get('valor_servico', 0))
@@ -520,31 +539,30 @@ class PDFGenerator:
         valor_total_geral = valor_servico + valor_total_pecas
         
         # Resumo financeiro
-        elements.append(Paragraph("<b>Resumo Financeiro:</b>", styles["Normal"]))
+        elements.append(Paragraph("<b>Resumo Financeiro:</b>", styles["SmallNormal"]))
         
         data = [
-            ["DESCRIÇÃO", "VALOR", "PORCENTAGEM", "TOTAL"],
-            ["Serviço (Mão de Obra)", f"R$ {valor_servico:.2f}".replace('.', ','), "100%", f"R$ {valor_servico:.2f}".replace('.', ',')],
-            ["Parte do Mecânico", f"R$ {valor_servico:.2f}".replace('.', ','), f"{porcentagem}%", f"R$ {valor_mecanico:.2f}".replace('.', ',')],
-            ["Parte da Loja (Serviço)", f"R$ {valor_servico:.2f}".replace('.', ','), f"{100-porcentagem}%", f"R$ {valor_loja_servico:.2f}".replace('.', ',')],
-            ["Peças (100% Loja)", f"R$ {valor_total_pecas:.2f}".replace('.', ','), "100%", f"R$ {valor_total_pecas:.2f}".replace('.', ',')],
-            ["Total para a Loja", "", "", f"R$ {valor_total_loja:.2f}".replace('.', ',')],
-            ["TOTAL GERAL", "", "", f"R$ {valor_total_geral:.2f}".replace('.', ',')],
+            ["DESCRIÇÃO", "VALOR", "TOTAL"],
+            ["Serviço (100%)", f"R$ {valor_servico:.2f}".replace('.', ','), ""],
+            ["Mecânico ({0}%)".format(porcentagem), f"R$ {valor_mecanico:.2f}".replace('.', ','), ""],
+            ["Loja ({0}%)".format(100-porcentagem), f"R$ {valor_loja_servico:.2f}".replace('.', ','), ""],
+            ["Peças (100% Loja)", f"R$ {valor_total_pecas:.2f}".replace('.', ','), ""],
+            ["Total Loja", "", f"R$ {valor_total_loja:.2f}".replace('.', ',')],
+            ["TOTAL GERAL", "", f"R$ {valor_total_geral:.2f}".replace('.', ',')],
         ]
         
-        t = Table(data, colWidths=[50*mm, 40*mm, 30*mm, 40*mm])
+        t = Table(data, colWidths=[35*mm, 22*mm, 18*mm])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
             ('GRID', (0, 0), (-1, 0), 0.5, colors.black),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('ALIGN', (1, 1), (3, -1), 'RIGHT'),
+            ('ALIGN', (1, 1), (2, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('SPAN', (0, -2), (2, -2)),
-            ('SPAN', (0, -1), (2, -1)),
             ('LINEABOVE', (0, -2), (-1, -2), 0.5, colors.black),
             ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
             ('FONTNAME', (0, -2), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
         elements.append(t)
         

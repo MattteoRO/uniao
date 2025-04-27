@@ -53,7 +53,7 @@
                         <td>
                             <div class="btn-group">
                                 <button type="button" class="btn btn-sm btn-outline-primary">Editar</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary">Carteira</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirCarteira({{ mecanico.id }}, '{{ mecanico.nome|replace("'", "\\'") }}', {{ mecanico.carteira.saldo if mecanico.carteira else 0 }})">Carteira</button>
                                 {% if mecanico.ativo %}
                                 <a href="{{ url_for('desativar_mecanico', mecanico_id=mecanico.id) }}" class="btn btn-sm btn-outline-danger">Desativar</a>
                                 {% else %}
@@ -71,6 +71,63 @@
             Nenhum mecânico cadastrado. Clique em "Novo Mecânico" para adicionar.
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modal Carteira -->
+<div class="modal fade" id="carteiraModal" tabindex="-1" aria-labelledby="carteiraModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="carteiraModalLabel">Carteira do Mecânico</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h3 id="mecanico_nome" class="card-title mb-3">Nome do Mecânico</h3>
+                                <div class="bg-light p-3 rounded mb-3">
+                                    <h5 class="text-muted mb-2">Saldo Atual</h5>
+                                    <h2 id="saldo_carteira" class="display-6 text-primary mb-0">R$ 0,00</h2>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button id="btn_zerar_saldo" class="btn btn-warning">
+                                        <i class="bi bi-cash-coin me-2"></i> Registrar Pagamento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Últimas Movimentações</h5>
+                                <div id="movimentacoes_container" class="list-group list-group-flush">
+                                    <div class="text-center p-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Carregando...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de movimentações -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Histórico de Movimentações</h5>
+                        <canvas id="graficoMovimentacoes" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -105,11 +162,227 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // JavaScript para filtrar mecânicos inativos
     document.getElementById('mostrarInativos').addEventListener('change', function() {
         const mostrarInativos = this.checked;
         window.location.href = "{{ url_for('mecanicos') }}?mostrar_inativos=" + (mostrarInativos ? 'true' : 'false');
     });
+    
+    // Variáveis globais para o modal de carteira
+    let mecanico_id_atual = null;
+    let graficoMovimentacoes = null;
+    
+    // Função para abrir o modal de carteira
+    function abrirCarteira(id, nome, saldo) {
+        mecanico_id_atual = id;
+        
+        // Atualizar informações básicas
+        document.getElementById('mecanico_nome').textContent = nome;
+        document.getElementById('saldo_carteira').textContent = 'R$ ' + formatarValor(saldo);
+        
+        // Ativar ou desativar botão de pagamento conforme saldo
+        const btnZerarSaldo = document.getElementById('btn_zerar_saldo');
+        btnZerarSaldo.disabled = saldo <= 0;
+        
+        // Resetar área de movimentações
+        document.getElementById('movimentacoes_container').innerHTML = `
+            <div class="text-center p-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+        `;
+        
+        // Carregar movimentações e histórico
+        carregarMovimentacoes(id);
+        
+        // Evento de botão de zerar saldo
+        btnZerarSaldo.onclick = function() {
+            if (confirm(`Confirmar pagamento de R$ ${formatarValor(saldo)} para ${nome}?`)) {
+                registrarPagamento(id, saldo);
+            }
+        };
+        
+        // Abrir o modal
+        const modal = new bootstrap.Modal(document.getElementById('carteiraModal'));
+        modal.show();
+    }
+    
+    // Função para formatar valores monetários
+    function formatarValor(valor) {
+        return valor.toFixed(2).replace('.', ',');
+    }
+    
+    // Carregar movimentações da carteira
+    function carregarMovimentacoes(mecanicoId) {
+        fetch(`/api/carteira/${mecanicoId}/movimentacoes`)
+            .then(response => response.json())
+            .then(data => {
+                // Atualizar lista de movimentações recentes
+                atualizarListaMovimentacoes(data);
+                
+                // Atualizar gráfico
+                atualizarGraficoMovimentacoes(data);
+            })
+            .catch(error => {
+                console.error('Erro ao carregar movimentações:', error);
+                document.getElementById('movimentacoes_container').innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao carregar movimentações: ${error.message || 'Erro desconhecido'}
+                    </div>
+                `;
+            });
+    }
+    
+    // Atualizar lista de movimentações recentes
+    function atualizarListaMovimentacoes(movimentacoes) {
+        const container = document.getElementById('movimentacoes_container');
+        
+        if (movimentacoes.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    Nenhuma movimentação registrada.
+                </div>
+            `;
+            return;
+        }
+        
+        // Mostrar apenas as últimas 5 movimentações
+        const movimentacoesRecentes = movimentacoes.slice(0, 5);
+        
+        let html = '';
+        movimentacoesRecentes.forEach(mov => {
+            const dataFormatada = new Date(mov.data).toLocaleDateString('pt-BR');
+            const valorFormatado = formatarValor(mov.valor);
+            const classeCor = mov.valor > 0 ? 'text-success' : 'text-danger';
+            
+            html += `
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">${mov.justificativa || 'Movimentação'}</div>
+                        <small class="text-muted">${dataFormatada}</small>
+                    </div>
+                    <span class="badge ${classeCor} rounded-pill">R$ ${valorFormatado}</span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    // Atualizar gráfico de movimentações
+    function atualizarGraficoMovimentacoes(movimentacoes) {
+        // Organizar dados para o gráfico
+        const dadosGrafico = prepararDadosGrafico(movimentacoes);
+        
+        // Destruir gráfico anterior se existir
+        if (graficoMovimentacoes) {
+            graficoMovimentacoes.destroy();
+        }
+        
+        // Criar novo gráfico
+        const ctx = document.getElementById('graficoMovimentacoes').getContext('2d');
+        graficoMovimentacoes = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dadosGrafico.labels,
+                datasets: [{
+                    label: 'Saldo (R$)',
+                    data: dadosGrafico.valores,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolução do Saldo'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'R$ ' + formatarValor(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'R$ ' + formatarValor(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Preparar dados para o gráfico
+    function prepararDadosGrafico(movimentacoes) {
+        // Ordenar movimentações por data
+        const movOrdenadas = [...movimentacoes].sort((a, b) => new Date(a.data) - new Date(b.data));
+        
+        // Limitar a 10 últimos pontos para não sobrecarregar o gráfico
+        const movLimitadas = movOrdenadas.slice(-10);
+        
+        // Extrair datas e valores
+        const labels = movLimitadas.map(mov => new Date(mov.data).toLocaleDateString('pt-BR'));
+        const valores = movLimitadas.map(mov => mov.valor);
+        
+        return { labels, valores };
+    }
+    
+    // Registrar pagamento (zerar saldo)
+    function registrarPagamento(mecanicoId, valorAtual) {
+        // Criar objeto com dados do pagamento
+        const dadosPagamento = {
+            valor: -valorAtual,  // Valor negativo para zerar o saldo
+            justificativa: 'Pagamento realizado'
+        };
+        
+        // Enviar requisição para o servidor
+        fetch(`/api/carteira/${mecanicoId}/pagar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dadosPagamento)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Atualizar saldo na interface
+                document.getElementById('saldo_carteira').textContent = 'R$ 0,00';
+                document.getElementById('btn_zerar_saldo').disabled = true;
+                
+                // Atualizar tabela de mecânicos
+                const saldoCell = document.querySelector(`tr[data-mecanico-id="${mecanicoId}"] td:nth-child(5)`);
+                if (saldoCell) {
+                    saldoCell.textContent = 'R$ 0,00';
+                }
+                
+                // Recarregar movimentações
+                carregarMovimentacoes(mecanicoId);
+                
+                alert('Pagamento registrado com sucesso!');
+            } else {
+                alert('Erro ao registrar pagamento: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao registrar pagamento:', error);
+            alert('Erro ao registrar pagamento. Consulte o console para mais detalhes.');
+        });
+    }
 </script>
 {% endblock %}

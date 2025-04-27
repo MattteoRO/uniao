@@ -534,8 +534,23 @@
                 tr.innerHTML = `
                     <td>${peca.id}</td>
                     <td>${peca.descricao}</td>
-                    <td>R$ ${peca.preco.toFixed(2).replace('.', ',')}</td>
-                    <td>${peca.quantidade}</td>
+                    <td>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control form-control-sm preco-input" 
+                                   value="${peca.preco.toFixed(2)}" 
+                                   min="0.01" step="0.01" 
+                                   data-index="${index}" 
+                                   onchange="atualizarPrecoPeca(${index}, this.value)">
+                        </div>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm qtd-input" 
+                               value="${peca.quantidade}" 
+                               min="1" step="1" 
+                               data-index="${index}" 
+                               onchange="atualizarQuantidadePeca(${index}, this.value)">
+                    </td>
                     <td>R$ ${total.toFixed(2).replace('.', ',')}</td>
                     <td>
                         <button type="button" class="btn btn-sm btn-danger" onclick="removerPeca(${index})">
@@ -555,6 +570,32 @@
         
         // Habilitar botões de PDF
         habilitarBotoesPDF();
+    }
+    
+    // Atualizar preço de uma peça
+    function atualizarPrecoPeca(index, novoPreco) {
+        novoPreco = parseFloat(novoPreco);
+        if (isNaN(novoPreco) || novoPreco <= 0) {
+            alert('Por favor, informe um preço válido maior que zero.');
+            atualizarTabelaPecas();  // Restaurar valor anterior
+            return;
+        }
+        
+        pecas[index].preco = novoPreco;
+        atualizarTabelaPecas();
+    }
+    
+    // Atualizar quantidade de uma peça
+    function atualizarQuantidadePeca(index, novaQuantidade) {
+        novaQuantidade = parseInt(novaQuantidade);
+        if (isNaN(novaQuantidade) || novaQuantidade <= 0) {
+            alert('Por favor, informe uma quantidade válida maior que zero.');
+            atualizarTabelaPecas();  // Restaurar valor anterior
+            return;
+        }
+        
+        pecas[index].quantidade = novaQuantidade;
+        atualizarTabelaPecas();
     }
     
     // Remover peça da lista
