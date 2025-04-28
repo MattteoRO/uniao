@@ -40,6 +40,12 @@ class PDFGenerator:
         os.makedirs(self.loja_dir, exist_ok=True)
         os.makedirs(self.extratos_dir, exist_ok=True)
     
+    def upper_if_str(self, value):
+        """Converte para maiúsculas se for string."""
+        if isinstance(value, str):
+            return value.upper()
+        return value
+    
     def gerar_pdf_cliente(self, servico, config=None):
         """
         Gera PDF para o cliente (tamanho 80mm x 200mm).

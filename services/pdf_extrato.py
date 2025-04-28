@@ -24,6 +24,12 @@ class PDFExtratoGenerator:
         # Criar diretório para armazenar PDFs se não existir
         self.extratos_dir = os.path.join(os.getcwd(), 'extratos')
         os.makedirs(self.extratos_dir, exist_ok=True)
+        
+    def upper_if_str(self, value):
+        """Converte para maiúsculas se for string."""
+        if isinstance(value, str):
+            return value.upper()
+        return value
     
     def gerar_pdf_extrato_mecanico(self, mecanico, carteira, movimentacoes, config=None):
         """
@@ -96,11 +102,11 @@ class PDFExtratoGenerator:
         
         elements.append(Spacer(1, 5*mm))
         
-        # Dados do mecânico e da carteira - Todos os dados do cliente em maiúsculo
+        # Dados do mecânico e da carteira - Todos os dados em maiúsculo
         data = [
-            ["Mecânico:", mecanico['nome'].upper()],
-            ["Saldo Atual:", f"R$ {carteira['saldo']:.2f}".replace('.', ',')],
-            ["Data Extrato:", data_atual],
+            ["MECÂNICO:", mecanico['nome'].upper()],
+            ["SALDO ATUAL:", f"R$ {carteira['saldo']:.2f}".replace('.', ',')],
+            ["DATA EXTRATO:", data_atual.upper()],
         ]
         
         t = Table(data, colWidths=[25*mm, 45*mm])
@@ -163,7 +169,7 @@ class PDFExtratoGenerator:
         
         data = [
             ["_______________________", "_______________________"],
-            ["Mecânico", "Responsável"],
+            ["MECÂNICO", "RESPONSÁVEL"],
         ]
         
         t = Table(data, colWidths=[35*mm, 35*mm])
