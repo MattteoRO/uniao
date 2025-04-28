@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 import pytz
 import tempfile
+from flask import current_app
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4, mm
@@ -246,24 +247,36 @@ class PDFGenerator:
         elements.append(Paragraph("<b>FALE CONOSCO PELO WHATSAPP</b>", styles["Center"]))
         elements.append(Spacer(1, 3*mm))
         
-        # Gerar QR Code temporário com número fixo
-        temp_qrcode = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        qrcode_path = QRCodeService.generate_whatsapp_qrcode("5569999199509", temp_qrcode.name)
-        
-        # Criar tabela para centralizar o QR code
-        qr_img = Image(qrcode_path, width=30*mm, height=30*mm)
-        qr_table = Table([[qr_img]], colWidths=[70*mm])
-        qr_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(qr_table)
-        
+        # Gerar QR Code para WhatsApp com número fixo
+        try:
+            # Criar diretório de qr codes se não existir
+            qrcode_dir = os.path.join(os.getcwd(), 'temp_qrcodes')
+            if not os.path.exists(qrcode_dir):
+                os.makedirs(qrcode_dir)
+                
+            # Usar um arquivo fixo em vez de temporário
+            qrcode_path = os.path.join(qrcode_dir, 'whatsapp_qrcode.png')
+            QRCodeService.generate_whatsapp_qrcode("5569999199509", qrcode_path)
+            
+            # Verificar se o arquivo foi criado
+            if os.path.exists(qrcode_path):
+                # Criar tabela para centralizar o QR code
+                qr_img = Image(qrcode_path, width=30*mm, height=30*mm)
+                qr_table = Table([[qr_img]], colWidths=[70*mm])
+                qr_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                elements.append(qr_table)
+            else:
+                # Se não conseguir gerar o QR code, apenas exibe o número
+                elements.append(Paragraph("Contato WhatsApp:", styles["Center"]))
+        except Exception as e:
+            # Em caso de erro, apenas exibe o número sem o QR
+            current_app.logger.error(f"Erro ao gerar QR code: {str(e)}")
+            
         # Adicionar o número abaixo do QR code
         elements.append(Paragraph("(69) 99919-9509", styles["Center"]))
-        
-        # Limpar arquivo temporário após uso
-        os.unlink(temp_qrcode.name)
         
         # Construir o documento
         doc.build(elements)
