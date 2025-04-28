@@ -298,7 +298,7 @@ class BackupService:
     @classmethod
     def resetar_sistema(cls, usuario_id=None):
         """
-        Restaura o sistema para o estado inicial, limpando todos os dados.
+        Restaura o sistema para o estado inicial, limpando todos os dados e PDFs.
         
         Args:
             usuario_id (int, optional): ID do usuário que solicitou o reset
@@ -333,6 +333,30 @@ class BackupService:
             
             # Limpar logs (exceto o do reset)
             db.session.query(LogSistema).delete()
+            
+            # Limpar todos os arquivos PDF das pastas
+            import os
+            import shutil
+            
+            diretorio_base = os.getcwd()
+            diretorios_pdf = [
+                os.path.join(diretorio_base, 'ser cliente'),
+                os.path.join(diretorio_base, 'ser mecanico'),
+                os.path.join(diretorio_base, 'ser loja'),
+                os.path.join(diretorio_base, 'extratos'),
+                os.path.join(diretorio_base, 'temp_qrcodes')
+            ]
+            
+            # Limpar cada diretório
+            for diretorio in diretorios_pdf:
+                if os.path.exists(diretorio):
+                    for arquivo in os.listdir(diretorio):
+                        caminho_arquivo = os.path.join(diretorio, arquivo)
+                        try:
+                            if os.path.isfile(caminho_arquivo):
+                                os.unlink(caminho_arquivo)
+                        except Exception as e:
+                            current_app.logger.error(f"Erro ao remover arquivo {caminho_arquivo}: {str(e)}")
             
             db.session.commit()
             

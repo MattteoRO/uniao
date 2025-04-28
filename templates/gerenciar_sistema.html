@@ -263,7 +263,8 @@
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle-fill"></i> <strong>ATENÇÃO!</strong>
                     <p>Esta ação irá limpar todos os dados do sistema e restaurá-lo para o estado inicial.</p>
-                    <p><strong>Todos os cadastros, serviços, movimentações financeiras e logs serão apagados!</strong></p>
+                    <p><strong>Todos os cadastros, serviços, movimentações financeiras, PDFs e logs serão apagados!</strong></p>
+                    <p>Todos os arquivos PDF gerados também serão excluídos permanentemente!</p>
                     <p>Esta ação é irreversível!</p>
                 </div>
                 <form method="POST" action="{{ url_for('resetar_sistema') }}">
