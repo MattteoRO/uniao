@@ -1115,7 +1115,8 @@ def registrar_movimentacao_loja():
 
 @app.route('/carteira/loja/zerar', methods=['POST'])
 def zerar_carteira_loja():
-    """Zerar saldo da carteira da loja (saque total)."""
+    """Zerar saldo da carteira da loja (saque total).
+    Permite que o saldo fique negativo para rastreamento financeiro."""
     from models_flask import Carteira, Movimentacao
     
     # Verificar confirmação
@@ -1130,23 +1131,26 @@ def zerar_carteira_loja():
         flash('Carteira da loja não encontrada.', 'danger')
         return redirect(url_for('carteira_loja'))
     
-    # Obter saldo atual
+    # Obter saldo atual e valor desejado de saque
     saldo_atual = carteira.saldo
-    if saldo_atual <= 0:
-        flash('Saldo já está zerado.', 'warning')
+    valor_saque = float(request.form.get('valor_saque', saldo_atual))
+    
+    # Verificar se o valor do saque foi definido
+    if valor_saque <= 0:
+        flash('Valor do saque deve ser maior que zero.', 'danger')
         return redirect(url_for('carteira_loja'))
     
-    # Criar movimentação negativa para zerar
-    justificativa = request.form.get('justificativa', 'Saque total realizado')
+    # Criar movimentação de saque (pode resultar em saldo negativo)
+    justificativa = request.form.get('justificativa', 'Saque realizado')
     movimentacao = Movimentacao(
         carteira_id=carteira.id,
-        valor=-saldo_atual,
-        justificativa=f"[SAQUE TOTAL] {justificativa}",
+        valor=-valor_saque,
+        justificativa=f"[SAQUE] {justificativa}",
         data=datetime.now()
     )
     
-    # Zerar saldo
-    carteira.saldo = 0
+    # Atualizar saldo (pode ficar negativo)
+    carteira.saldo -= valor_saque
     
     # Salvar no banco de dados
     db.session.add(movimentacao)
