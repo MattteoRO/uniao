@@ -524,8 +524,8 @@ class PDFGenerator:
                 total = valor_unitario * quantidade
                 
                 data.append([
-                    peca.get('peca_id', 'N/A'),
-                    peca.get('descricao', 'N/A'),
+                    peca.get('peca_id', 'N/A').upper(),
+                    peca.get('descricao', 'N/A').upper(),
                     f"R$ {valor_unitario:.2f}".replace('.', ','),
                     str(quantidade),
                     f"R$ {total:.2f}".replace('.', ',')
