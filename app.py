@@ -1274,17 +1274,10 @@ def excluir_servico(servico_id):
 
 # Rotas para gerenciamento do sistema
 @app.route('/sistema')
-@login_required
+@admin_required
 def gerenciar_sistema():
     """Página de gerenciamento do sistema."""
     from models_flask import Usuario, LogSistema
-    
-    # Verificar se o usuário é administrador
-    usuario_id = session.get('usuario_id')
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario or not usuario.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Obter lista de usuários
     usuarios = Usuario.query.order_by(Usuario.username).all()
@@ -1295,18 +1288,14 @@ def gerenciar_sistema():
     return render_template('gerenciar_sistema.html', usuarios=usuarios, logs=logs)
 
 @app.route('/sistema/exportar')
-@login_required
+@admin_required
 def exportar_dados():
     """Exporta todos os dados do sistema para backup."""
     from models_flask import Usuario, LogSistema
     from services.backup_service import BackupService
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     usuario_id = session.get('usuario_id')
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario or not usuario.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     try:
         # Exportar dados
@@ -1320,18 +1309,14 @@ def exportar_dados():
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/importar', methods=['POST'])
-@login_required
+@admin_required
 def importar_dados():
     """Importa dados do sistema a partir de um arquivo JSON."""
     from models_flask import Usuario, LogSistema
     from services.backup_service import BackupService
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     usuario_id = session.get('usuario_id')
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario or not usuario.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Verificar se foi enviado um arquivo
     if 'arquivo' not in request.files:
@@ -1368,18 +1353,14 @@ def importar_dados():
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/reset', methods=['POST'])
-@login_required
+@admin_required
 def resetar_sistema():
     """Restaura o sistema para o estado inicial."""
     from models_flask import Usuario, LogSistema
     from services.backup_service import BackupService
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     usuario_id = session.get('usuario_id')
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario or not usuario.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Verificar confirmação
     confirmacao = request.form.get('confirmacao')
@@ -1400,17 +1381,13 @@ def resetar_sistema():
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/usuario/adicionar', methods=['POST'])
-@login_required
+@admin_required
 def adicionar_usuario():
     """Adiciona um novo usuário ao sistema."""
     from models_flask import Usuario, LogSistema
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     usuario_id = session.get('usuario_id')
-    usuario = Usuario.query.get(usuario_id)
-    if not usuario or not usuario.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Obter dados do formulário
     username = request.form.get('username')
@@ -1461,17 +1438,13 @@ def adicionar_usuario():
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/usuario/<int:usuario_id>/alterar-senha', methods=['POST'])
-@login_required
+@admin_required
 def alterar_senha():
     """Altera a senha de um usuário."""
     from models_flask import Usuario, LogSistema
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     admin_id = session.get('usuario_id')
-    admin = Usuario.query.get(admin_id)
-    if not admin or not admin.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Obter dados do formulário
     usuario_id = request.form.get('usuario_id')
@@ -1513,17 +1486,13 @@ def alterar_senha():
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/usuario/<int:usuario_id>/ativar')
-@login_required
+@admin_required
 def ativar_usuario(usuario_id):
     """Ativa um usuário desativado."""
     from models_flask import Usuario, LogSistema
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     admin_id = session.get('usuario_id')
-    admin = Usuario.query.get(admin_id)
-    if not admin or not admin.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     try:
         # Buscar usuário
@@ -1551,17 +1520,13 @@ def ativar_usuario(usuario_id):
         return redirect(url_for('gerenciar_sistema'))
 
 @app.route('/sistema/usuario/<int:usuario_id>/desativar')
-@login_required
+@admin_required
 def desativar_usuario(usuario_id):
     """Desativa um usuário ativo."""
     from models_flask import Usuario, LogSistema
     
-    # Verificar se o usuário é administrador
+    # Obter ID do usuário administrador
     admin_id = session.get('usuario_id')
-    admin = Usuario.query.get(admin_id)
-    if not admin or not admin.admin:
-        flash('Acesso restrito a administradores.', 'danger')
-        return redirect(url_for('index'))
     
     # Verificar se não é o próprio usuário
     if int(usuario_id) == int(admin_id):
