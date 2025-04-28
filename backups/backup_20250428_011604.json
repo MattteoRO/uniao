@@ -1,0 +1,203 @@
+{
+  "data_backup": "2025-04-28T01:16:04.237677",
+  "mecanicos": [
+    {
+      "id": 1,
+      "nome": "mateus",
+      "telefone": "69993059302",
+      "data_cadastro": "2025-04-27T19:07:19.394496",
+      "ativo": true
+    }
+  ],
+  "carteiras": [
+    {
+      "id": 1,
+      "tipo": "mecanico",
+      "mecanico_id": 1,
+      "saldo": 160.0
+    },
+    {
+      "id": 2,
+      "tipo": "loja",
+      "mecanico_id": null,
+      "saldo": 240.0
+    }
+  ],
+  "movimentacoes": [
+    {
+      "id": 7,
+      "carteira_id": 1,
+      "valor": 80.0,
+      "justificativa": "Pagamento de serviço #4",
+      "data": "2025-04-27T22:24:23.926668",
+      "servico_id": 4
+    },
+    {
+      "id": 8,
+      "carteira_id": 2,
+      "valor": 2120.0,
+      "justificativa": "Recebimento de serviço #4 (peças + % serviço)",
+      "data": "2025-04-27T22:24:23.926870",
+      "servico_id": 4
+    },
+    {
+      "id": 9,
+      "carteira_id": 1,
+      "valor": 20.0,
+      "justificativa": "Pagamento de serviço #5",
+      "data": "2025-04-27T22:29:45.288629",
+      "servico_id": 5
+    },
+    {
+      "id": 10,
+      "carteira_id": 2,
+      "valor": 240.0,
+      "justificativa": "Recebimento de serviço #5 (peças + % serviço)",
+      "data": "2025-04-27T22:29:45.288756",
+      "servico_id": 5
+    },
+    {
+      "id": 11,
+      "carteira_id": 1,
+      "valor": -340.0,
+      "justificativa": "Pagamento realizado",
+      "data": "2025-04-27T22:30:21.896878",
+      "servico_id": null
+    },
+    {
+      "id": 12,
+      "carteira_id": 2,
+      "valor": -2940.0,
+      "justificativa": "[SAQUE TOTAL] saque do mÊs",
+      "data": "2025-04-27T23:08:48.948970",
+      "servico_id": null
+    },
+    {
+      "id": 13,
+      "carteira_id": 1,
+      "valor": 160.0,
+      "justificativa": "Pagamento de serviço #6",
+      "data": "2025-04-28T00:31:29.987751",
+      "servico_id": 6
+    },
+    {
+      "id": 14,
+      "carteira_id": 2,
+      "valor": 40.0,
+      "justificativa": "Recebimento de serviço #6 (20% da mão de obra)",
+      "data": "2025-04-28T00:31:29.987904",
+      "servico_id": 6
+    },
+    {
+      "id": 15,
+      "carteira_id": 2,
+      "valor": 200.0,
+      "justificativa": "Peças do serviço #6",
+      "data": "2025-04-28T00:31:29.987953",
+      "servico_id": 6
+    }
+  ],
+  "servicos": [
+    {
+      "id": 4,
+      "cliente": "João Silva souds",
+      "telefone": "69993059302",
+      "descricao": "troca de oleo mineral",
+      "mecanico_id": 1,
+      "valor_servico": 100.0,
+      "porcentagem_mecanico": 80,
+      "data_criacao": "2025-04-27T22:22:54.566234",
+      "status": "concluido"
+    },
+    {
+      "id": 5,
+      "cliente": "luiz campos",
+      "telefone": "69993059302",
+      "descricao": "Troca de cabo",
+      "mecanico_id": 1,
+      "valor_servico": 20.0,
+      "porcentagem_mecanico": 100,
+      "data_criacao": "2025-04-27T22:28:58.754151",
+      "status": "concluido"
+    },
+    {
+      "id": 6,
+      "cliente": "Suely Oliveira",
+      "telefone": "69993059302",
+      "descricao": "Troca do kit relação da monark 2026-2027 cinza",
+      "mecanico_id": 1,
+      "valor_servico": 200.0,
+      "porcentagem_mecanico": 80,
+      "data_criacao": "2025-04-27T23:18:41.059813",
+      "status": "concluido"
+    },
+    {
+      "id": 7,
+      "cliente": "João Silva",
+      "telefone": "69993059302",
+      "descricao": "sdgsgsdg",
+      "mecanico_id": 1,
+      "valor_servico": 120.0,
+      "porcentagem_mecanico": 80,
+      "data_criacao": "2025-04-28T01:02:34.654918",
+      "status": "aberto"
+    }
+  ],
+  "servico_pecas": [
+    {
+      "id": 4,
+      "servico_id": 4,
+      "peca_id": "5",
+      "descricao": "BIC GTM 29 AL CXR 21V F.HID PTO/VERD",
+      "codigo_barras": "7800000000054",
+      "preco_unitario": 2100.0,
+      "quantidade": 1
+    },
+    {
+      "id": 5,
+      "servico_id": 5,
+      "peca_id": "9",
+      "descricao": "PNEU 29 X 2.10 HUTCHINSON",
+      "codigo_barras": "7800000000092",
+      "preco_unitario": 120.0,
+      "quantidade": 2
+    },
+    {
+      "id": 6,
+      "servico_id": 6,
+      "peca_id": "CD125",
+      "descricao": "aro 415",
+      "codigo_barras": "",
+      "preco_unitario": 200.0,
+      "quantidade": 1
+    },
+    {
+      "id": 7,
+      "servico_id": 7,
+      "peca_id": "3",
+      "descricao": "BIC GTM 29 AL CXR 21V F.MEC PTO/VERD",
+      "codigo_barras": "7800000000030",
+      "preco_unitario": 1700.0,
+      "quantidade": 1
+    }
+  ],
+  "configuracoes": [
+    {
+      "id": 1,
+      "nome_empresa": "Monark Motopeças e Bicicletaria",
+      "endereco": "Av. Luiz de França Torres, Nova Mamore",
+      "telefone": "",
+      "caminho_csv": "bdmonarkbd.csv"
+    }
+  ],
+  "usuarios": [
+    {
+      "id": 1,
+      "username": "1",
+      "nome": "Administrador",
+      "data_cadastro": "2025-04-28T00:20:49.143848",
+      "ativo": true,
+      "admin": true
+    }
+  ]
+}
