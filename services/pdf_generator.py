@@ -4,13 +4,17 @@ Responsável por gerar PDF para cliente, mecânico e loja.
 """
 import os
 from datetime import datetime
+import pytz
+import tempfile
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4, mm
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+
+from services.qrcode_service import QRCodeService
 
 
 class PDFGenerator:
@@ -225,8 +229,28 @@ class PDFGenerator:
         ]))
         elements.append(t)
         
-        # Rodapé
+        # QR Code do WhatsApp e Rodapé
         elements.append(Spacer(1, 5*mm))
+        
+        # Adicionar QR Code do WhatsApp se tiver telefone na configuração
+        telefone_loja = config.get('telefone') if config else None
+        
+        if telefone_loja:
+            elements.append(Paragraph("<b>FALE CONOSCO PELO WHATSAPP</b>", styles["Center"]))
+            elements.append(Spacer(1, 2*mm))
+            
+            # Gerar QR Code temporário
+            temp_qrcode = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            qrcode_path = QRCodeService.generate_whatsapp_qrcode(telefone_loja, temp_qrcode.name)
+            
+            # Adicionar imagem do QR Code
+            qr_img = Image(qrcode_path, width=25*mm, height=25*mm)
+            elements.append(qr_img)
+            
+            # Limpar arquivo temporário após uso
+            os.unlink(temp_qrcode.name)
+        
+        elements.append(Spacer(1, 3*mm))
         elements.append(Paragraph("Obrigado pela preferência!", styles["Center"]))
         
         # Construir o documento
