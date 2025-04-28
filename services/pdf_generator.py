@@ -177,12 +177,13 @@ class PDFGenerator:
                 f"R$ {servico['valor_total_pecas']:.2f}".replace('.', ',')
             ])
             
-            # Criar tabela
+            # Criar tabela com quebra de texto
             t = Table(data, colWidths=[7*mm, 31*mm, 15*mm, 17*mm])
             t.setStyle(TableStyle([
                 ('FONTSIZE', (0, 0), (-1, -1), 7),
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
                 ('GRID', (0, 0), (-1, 0), 0.5, colors.black),
+                ('WORDWRAP', (0, 0), (-1, -1), True),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
@@ -240,28 +241,29 @@ class PDFGenerator:
         elements.append(Paragraph("Obrigado pela preferência!", styles["Center"]))
         
         # Adicionar QR Code do WhatsApp centralizado após a mensagem de agradecimento
-        telefone_loja = config.get('telefone') if config else None
+        # Usando o número fixo solicitado: 5569999199509
+        elements.append(Spacer(1, 5*mm))
+        elements.append(Paragraph("<b>FALE CONOSCO PELO WHATSAPP</b>", styles["Center"]))
+        elements.append(Spacer(1, 3*mm))
         
-        if telefone_loja:
-            elements.append(Spacer(1, 5*mm))
-            elements.append(Paragraph("<b>FALE CONOSCO PELO WHATSAPP</b>", styles["Center"]))
-            elements.append(Spacer(1, 3*mm))
-            
-            # Gerar QR Code temporário
-            temp_qrcode = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-            qrcode_path = QRCodeService.generate_whatsapp_qrcode(telefone_loja, temp_qrcode.name)
-            
-            # Criar tabela para centralizar o QR code
-            qr_img = Image(qrcode_path, width=30*mm, height=30*mm)
-            qr_table = Table([[qr_img]], colWidths=[70*mm])
-            qr_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
-            elements.append(qr_table)
-            
-            # Limpar arquivo temporário após uso
-            os.unlink(temp_qrcode.name)
+        # Gerar QR Code temporário com número fixo
+        temp_qrcode = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        qrcode_path = QRCodeService.generate_whatsapp_qrcode("5569999199509", temp_qrcode.name)
+        
+        # Criar tabela para centralizar o QR code
+        qr_img = Image(qrcode_path, width=30*mm, height=30*mm)
+        qr_table = Table([[qr_img]], colWidths=[70*mm])
+        qr_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(qr_table)
+        
+        # Adicionar o número abaixo do QR code
+        elements.append(Paragraph("(69) 99919-9509", styles["Center"]))
+        
+        # Limpar arquivo temporário após uso
+        os.unlink(temp_qrcode.name)
         
         # Construir o documento
         doc.build(elements)

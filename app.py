@@ -1447,7 +1447,7 @@ def adicionar_usuario():
         flash(f'Erro ao adicionar usuário: {str(e)}', 'danger')
         return redirect(url_for('gerenciar_sistema'))
 
-@app.route('/sistema/usuario/<int:usuario_id>/alterar-senha', methods=['POST'])
+@app.route('/sistema/usuario/alterar-senha', methods=['POST'])
 @admin_required
 def alterar_senha():
     """Altera a senha de um usuário."""
