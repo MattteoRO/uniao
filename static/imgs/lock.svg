@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>Lock</title>
-    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g transform="translate(4.000000, 1.000000)" fill="#000000" fill-rule="nonzero">
-            <path d="M16,8 L16,21 C16,21.5522847 15.5522847,22 15,22 L1,22 C0.44771525,22 0,21.5522847 0,21 L0,8 C0,7.44771525 0.44771525,7 1,7 L2,7 L2,5 C2,2.23857625 4.23857625,0 7,0 C9.76142375,0 12,2.23857625 12,5 L12,7 L15,7 C15.5522847,7 16,7.44771525 16,8 Z M8,12 L8,17 C8,17.5522847 8.44771525,18 9,18 C9.55228475,18 10,17.5522847 10,17 L10,12 C10,11.4477153 9.55228475,11 9,11 C8.44771525,11 8,11.4477153 8,12 Z M4,7 L12,7 L12,5 C12,3.34314575 10.6568542,2 9,2 C7.34314575,2 6,3.34314575 6,5 L6,7 L4,7 Z"></path>
-        </g>
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lock-fill" viewBox="0 0 16 16">
+  <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
 </svg>

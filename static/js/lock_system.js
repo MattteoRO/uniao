@@ -1,43 +1,29 @@
-// Sistema de bloqueio automático
-let inactivityTimer;
-let inactivityTimeout = 90000; // 90 segundos em milissegundos
-let lockUrl = '/login';
-let isLocked = false;
+/**
+ * Sistema de Bloqueio Automático
+ * 
+ * Bloqueia o sistema após inatividade de 90 segundos
+ * e permite o bloqueio manual através de botão
+ */
 
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(lockScreen, inactivityTimeout);
-}
-
-function lockScreen() {
-    if (!isLocked) {
-        isLocked = true;
-        window.location.href = lockUrl;
+document.addEventListener('DOMContentLoaded', function() {
+    let inactivityTimer;
+    const lockTimeoutSeconds = 90; // 90 segundos de inatividade
+    
+    // Função para bloquear o sistema (redirecionar para login)
+    function lockSystem() {
+        window.location.href = '/logout';
     }
-}
-
-function setupLockSystem() {
-    // Iniciar o timer de inatividade
-    resetInactivityTimer();
     
-    // Resetar o timer quando houver qualquer atividade do usuário
-    document.addEventListener('mousemove', resetInactivityTimer);
-    document.addEventListener('mousedown', resetInactivityTimer);
-    document.addEventListener('keypress', resetInactivityTimer);
-    document.addEventListener('touchstart', resetInactivityTimer);
-    document.addEventListener('scroll', resetInactivityTimer);
+    // Reiniciar o contador de inatividade
+    function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(lockSystem, lockTimeoutSeconds * 1000);
+    }
     
-    // Detectar quando a janela é minimizada (visibilitychange)
-    document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden') {
-            // Janela minimizada ou mudança para outra aba
-            // Não esperamos o tempo completo, bloqueamos mais rapidamente
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(lockScreen, 5000); // 5 segundos quando minimizado
-        } else {
-            // Janela restaurada
-            resetInactivityTimer();
-        }
+    // Configurar eventos para resetar o temporizador
+    const eventsToMonitor = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
+    eventsToMonitor.forEach(eventType => {
+        document.addEventListener(eventType, resetInactivityTimer);
     });
     
     // Configurar botão de bloqueio manual
@@ -45,10 +31,10 @@ function setupLockSystem() {
     if (lockButton) {
         lockButton.addEventListener('click', function(e) {
             e.preventDefault();
-            lockScreen();
+            lockSystem();
         });
     }
-}
-
-// Inicializar quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', setupLockSystem);
+    
+    // Iniciar o temporizador de inatividade
+    resetInactivityTimer();
+});
