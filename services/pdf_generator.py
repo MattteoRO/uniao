@@ -167,8 +167,8 @@ class PDFGenerator:
             data.append([
                 "",
                 "",
-                "<b>TOTAL PEÇAS:</b>",
-                f"<b>R$ {servico['valor_total_pecas']:.2f}</b>".replace('.', ',')
+                "TOTAL PEÇAS:",
+                f"R$ {servico['valor_total_pecas']:.2f}".replace('.', ',')
             ])
             
             # Criar tabela
@@ -229,29 +229,33 @@ class PDFGenerator:
         ]))
         elements.append(t)
         
-        # QR Code do WhatsApp e Rodapé
+        # Rodapé
         elements.append(Spacer(1, 5*mm))
+        elements.append(Paragraph("Obrigado pela preferência!", styles["Center"]))
         
-        # Adicionar QR Code do WhatsApp se tiver telefone na configuração
+        # Adicionar QR Code do WhatsApp centralizado após a mensagem de agradecimento
         telefone_loja = config.get('telefone') if config else None
         
         if telefone_loja:
+            elements.append(Spacer(1, 5*mm))
             elements.append(Paragraph("<b>FALE CONOSCO PELO WHATSAPP</b>", styles["Center"]))
-            elements.append(Spacer(1, 2*mm))
+            elements.append(Spacer(1, 3*mm))
             
             # Gerar QR Code temporário
             temp_qrcode = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             qrcode_path = QRCodeService.generate_whatsapp_qrcode(telefone_loja, temp_qrcode.name)
             
-            # Adicionar imagem do QR Code
-            qr_img = Image(qrcode_path, width=25*mm, height=25*mm)
-            elements.append(qr_img)
+            # Criar tabela para centralizar o QR code
+            qr_img = Image(qrcode_path, width=30*mm, height=30*mm)
+            qr_table = Table([[qr_img]], colWidths=[70*mm])
+            qr_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            elements.append(qr_table)
             
             # Limpar arquivo temporário após uso
             os.unlink(temp_qrcode.name)
-        
-        elements.append(Spacer(1, 3*mm))
-        elements.append(Paragraph("Obrigado pela preferência!", styles["Center"]))
         
         # Construir o documento
         doc.build(elements)
@@ -532,8 +536,8 @@ class PDFGenerator:
                 "",
                 "",
                 "",
-                "<b>TOTAL:</b>",
-                f"<b>R$ {servico['valor_total_pecas']:.2f}</b>".replace('.', ',')
+                "TOTAL:",
+                f"R$ {servico['valor_total_pecas']:.2f}".replace('.', ',')
             ])
             
             # Criar tabela

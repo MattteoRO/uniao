@@ -50,9 +50,34 @@ DEFAULT_PASSWORD = "286"
 
 # Função para verificar as credenciais
 def verificar_credenciais(username, password):
-    # Para fins de desenvolvimento, usamos credenciais fixas
-    # Em um sistema de produção, essas credenciais estariam em um banco de dados
-    return username == DEFAULT_USERNAME and password == DEFAULT_PASSWORD
+    """Verifica as credenciais do usuário e retorna o objeto usuário se for válido"""
+    from models_flask import Usuario
+    
+    # Verificar se o usuário existe no banco de dados
+    usuario = Usuario.query.filter_by(username=username, ativo=True).first()
+    if usuario and usuario.verificar_senha(password):
+        return usuario
+        
+    # Criar usuário admin padrão se as credenciais iniciais forem fornecidas
+    if username == DEFAULT_USERNAME and password == DEFAULT_PASSWORD:
+        # Verificar se já existe um usuário admin
+        admin = Usuario.query.filter_by(admin=True).first()
+        if not admin:
+            # Criar usuário admin padrão
+            try:
+                admin = Usuario.criar(
+                    username=DEFAULT_USERNAME,
+                    nome="Administrador",
+                    senha=DEFAULT_PASSWORD,
+                    admin=True
+                )
+                db.session.add(admin)
+                db.session.commit()
+                return admin
+            except:
+                db.session.rollback()
+                
+    return None
 
 # Função para verificar se o usuário está autenticado
 def login_required(f):
@@ -60,6 +85,21 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'autenticado' not in session or not session['autenticado']:
             return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Função para verificar se o usuário é administrador
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'autenticado' not in session or not session['autenticado']:
+            return redirect(url_for('login', next=request.url))
+        
+        # Verificar se o usuário é administrador
+        if 'admin' not in session or not session['admin']:
+            flash('Acesso restrito a administradores.', 'danger')
+            return redirect(url_for('index'))
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -72,9 +112,12 @@ def login():
         username = form.username.data
         password = form.password.data
         
-        if verificar_credenciais(username, password):
+        usuario = verificar_credenciais(username, password)
+        if usuario:
             session['autenticado'] = True
             session['ultimo_acesso'] = time.time()
+            session['usuario_id'] = usuario.id
+            session['admin'] = usuario.admin
             
             next_page = request.args.get('next')
             if next_page:

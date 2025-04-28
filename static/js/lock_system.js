@@ -20,10 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
         inactivityTimer = setTimeout(lockSystem, lockTimeoutSeconds * 1000);
     }
     
-    // Configurar eventos para resetar o temporizador
-    const eventsToMonitor = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
-    eventsToMonitor.forEach(eventType => {
-        document.addEventListener(eventType, resetInactivityTimer);
+    // Resetar o temporizador apenas em cliques de botões e links
+    document.addEventListener('click', function(e) {
+        // Verificar se o clique foi em um botão, link ou qualquer elemento clicável
+        if (e.target.tagName === 'BUTTON' || 
+            e.target.tagName === 'A' || 
+            e.target.closest('button') || 
+            e.target.closest('a') ||
+            e.target.tagName === 'INPUT' && (e.target.type === 'submit' || e.target.type === 'button')) {
+            resetInactivityTimer();
+        }
     });
     
     // Configurar botão de bloqueio manual
