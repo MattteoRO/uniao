@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+
+{% block title %}Gerenciar Sistema - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Gerenciamento do Sistema</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-person-fill-gear"></i> Usuários</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Gerenciar usuários do sistema, alterar senhas e adicionar novos administradores.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuarios">
+                    Gerenciar Usuários
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-file-earmark-arrow-down-fill"></i> Backup</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Exportar e importar dados do sistema para backup e restauração.</p>
+                <a href="{{ url_for('exportar_dados') }}" class="btn btn-success me-2" id="btn-exportar">Exportar Dados</a>
+                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#modalImportar">
+                    Importar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-trash-fill"></i> Restaurar Sistema</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Reinicia o sistema para o estado inicial, removendo todos os dados.</p>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalResetar">
+                    Restaurar Sistema
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-list-columns-reverse"></i> Logs do Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Usuário</th>
+                                <th>Ação</th>
+                                <th>Descrição</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.data.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                                <td>{{ log.usuario.nome if log.usuario else 'Sistema' }}</td>
+                                <td>{{ log.acao }}</td>
+                                <td>{{ log.descricao }}</td>
+                                <td>{{ log.ip }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">Nenhum log encontrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Usuários -->
+<div class="modal fade" id="modalUsuarios" tabindex="-1" aria-labelledby="modalUsuariosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalUsuariosLabel">Gerenciar Usuários</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="usuariosTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="listar-tab" data-bs-toggle="tab" data-bs-target="#listar" type="button" role="tab" aria-controls="listar" aria-selected="true">Usuários</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="adicionar-tab" data-bs-toggle="tab" data-bs-target="#adicionar" type="button" role="tab" aria-controls="adicionar" aria-selected="false">Adicionar Usuário</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="alterar-senha-tab" data-bs-toggle="tab" data-bs-target="#alterar-senha" type="button" role="tab" aria-controls="alterar-senha" aria-selected="false">Alterar Senha</button>
+                    </li>
+                </ul>
+                <div class="tab-content p-3" id="usuariosTabContent">
+                    <div class="tab-pane fade show active" id="listar" role="tabpanel" aria-labelledby="listar-tab">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Usuário</th>
+                                        <th>Nome</th>
+                                        <th>Data de Cadastro</th>
+                                        <th>Admin</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usuario in usuarios %}
+                                    <tr>
+                                        <td>{{ usuario.id }}</td>
+                                        <td>{{ usuario.username }}</td>
+                                        <td>{{ usuario.nome }}</td>
+                                        <td>{{ usuario.data_cadastro.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            {% if usuario.admin %}
+                                            <span class="badge bg-success">Sim</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Não</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if usuario.ativo %}
+                                            <span class="badge bg-success">Ativo</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Inativo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if usuario.ativo %}
+                                            <a href="{{ url_for('desativar_usuario', usuario_id=usuario.id) }}" class="btn btn-sm btn-warning">Desativar</a>
+                                            {% else %}
+                                            <a href="{{ url_for('ativar_usuario', usuario_id=usuario.id) }}" class="btn btn-sm btn-success">Ativar</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">Nenhum usuário cadastrado</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="adicionar" role="tabpanel" aria-labelledby="adicionar-tab">
+                        <form method="POST" action="{{ url_for('adicionar_usuario') }}">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Nome de Usuário</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome Completo</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="senha" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="senha" name="senha" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmacao_senha" class="form-label">Confirmar Senha</label>
+                                <input type="password" class="form-control" id="confirmacao_senha" name="confirmacao_senha" required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="admin" name="admin">
+                                <label class="form-check-label" for="admin">Administrador</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Adicionar Usuário</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="alterar-senha" role="tabpanel" aria-labelledby="alterar-senha-tab">
+                        <form method="POST" action="{{ url_for('alterar_senha') }}">
+                            <div class="mb-3">
+                                <label for="usuario_id" class="form-label">Usuário</label>
+                                <select class="form-select" id="usuario_id" name="usuario_id" required>
+                                    <option value="">Selecione o usuário</option>
+                                    {% for usuario in usuarios %}
+                                    <option value="{{ usuario.id }}">{{ usuario.nome }} ({{ usuario.username }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nova_senha" class="form-label">Nova Senha</label>
+                                <input type="password" class="form-control" id="nova_senha" name="nova_senha" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmacao_nova_senha" class="form-label">Confirmar Nova Senha</label>
+                                <input type="password" class="form-control" id="confirmacao_nova_senha" name="confirmacao_nova_senha" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning">Alterar Senha</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar -->
+<div class="modal fade" id="modalImportar" tabindex="-1" aria-labelledby="modalImportarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="modalImportarLabel">Importar Dados</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Atenção: A importação substituirá todos os dados atuais do sistema.
+                    Faça um backup antes de continuar.
+                </p>
+                <form method="POST" action="{{ url_for('importar_dados') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="arquivo" class="form-label">Arquivo de Backup (.json)</label>
+                        <input type="file" class="form-control" id="arquivo" name="arquivo" accept=".json" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">Importar Dados</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Resetar -->
+<div class="modal fade" id="modalResetar" tabindex="-1" aria-labelledby="modalResetarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalResetarLabel">Restaurar Sistema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <strong>ATENÇÃO!</strong>
+                    <p>Esta ação irá limpar todos os dados do sistema e restaurá-lo para o estado inicial.</p>
+                    <p><strong>Todos os cadastros, serviços, movimentações financeiras e logs serão apagados!</strong></p>
+                    <p>Esta ação é irreversível!</p>
+                </div>
+                <form method="POST" action="{{ url_for('resetar_sistema') }}">
+                    <div class="mb-3">
+                        <label for="confirmacao" class="form-label">Digite "CONFIRMAR" para continuar:</label>
+                        <input type="text" class="form-control" id="confirmacao" name="confirmacao" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">Restaurar Sistema</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Função para verificar confirmação de reset
+        document.querySelector('form[action="{{ url_for("resetar_sistema") }}"]').addEventListener('submit', function(e) {
+            const confirmacao = document.getElementById('confirmacao').value;
+            if (confirmacao !== 'CONFIRMAR') {
+                e.preventDefault();
+                alert('Você deve digitar CONFIRMAR para prosseguir.');
+                return false;
+            }
+            
+            if (!confirm('Tem certeza que deseja resetar o sistema? Esta ação é irreversível!')) {
+                e.preventDefault();
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Verificar senhas iguais no cadastro
+        document.querySelector('form[action="{{ url_for("adicionar_usuario") }}"]').addEventListener('submit', function(e) {
+            const senha = document.getElementById('senha').value;
+            const confirmacao = document.getElementById('confirmacao_senha').value;
+            
+            if (senha !== confirmacao) {
+                e.preventDefault();
+                alert('As senhas não conferem.');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Verificar senhas iguais na alteração
+        document.querySelector('form[action="{{ url_for("alterar_senha") }}"]').addEventListener('submit', function(e) {
+            const senha = document.getElementById('nova_senha').value;
+            const confirmacao = document.getElementById('confirmacao_nova_senha').value;
+            
+            if (senha !== confirmacao) {
+                e.preventDefault();
+                alert('As senhas não conferem.');
+                return false;
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,4 +1,8 @@
+import hashlib
+import secrets
+import os
 from datetime import datetime
+
 from app import db
 
 class Mecanico(db.Model):
@@ -115,3 +119,93 @@ class Configuracao(db.Model):
     
     def __repr__(self):
         return f'<Configuracao {self.nome_empresa}>'
+        
+        
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    nome = db.Column(db.String(100), nullable=False)
+    senha_hash = db.Column(db.String(256), nullable=False)
+    salt = db.Column(db.String(64), nullable=False)
+    data_cadastro = db.Column(db.DateTime, default=datetime.now)
+    ativo = db.Column(db.Boolean, default=True)
+    admin = db.Column(db.Boolean, default=False)
+    
+    def __repr__(self):
+        return f'<Usuario {self.username}>'
+    
+    @staticmethod
+    def _gerar_salt():
+        """Gera um salt aleatório para a senha"""
+        return secrets.token_hex(32)
+    
+    @staticmethod
+    def _hash_senha(senha, salt):
+        """Gera o hash da senha usando o salt"""
+        senha_com_salt = senha + salt
+        # Algoritmo SHA-256
+        return hashlib.sha256(senha_com_salt.encode()).hexdigest()
+    
+    @classmethod
+    def criar(cls, username, nome, senha, admin=False):
+        """Cria um novo usuário com a senha já hasheada"""
+        salt = cls._gerar_salt()
+        senha_hash = cls._hash_senha(senha, salt)
+        
+        usuario = cls(
+            username=username,
+            nome=nome,
+            senha_hash=senha_hash,
+            salt=salt,
+            admin=admin
+        )
+        db.session.add(usuario)
+        db.session.commit()
+        return usuario
+    
+    def verificar_senha(self, senha):
+        """Verifica se a senha está correta"""
+        hash_verificacao = self._hash_senha(senha, self.salt)
+        return hash_verificacao == self.senha_hash
+    
+    def alterar_senha(self, nova_senha):
+        """Altera a senha do usuário"""
+        salt = self._gerar_salt()
+        senha_hash = self._hash_senha(nova_senha, salt)
+        
+        self.senha_hash = senha_hash
+        self.salt = salt
+        db.session.commit()
+        return True
+
+
+class LogSistema(db.Model):
+    __tablename__ = 'logs_sistema'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
+    acao = db.Column(db.String(100), nullable=False)
+    descricao = db.Column(db.Text)
+    data = db.Column(db.DateTime, default=datetime.now)
+    ip = db.Column(db.String(50))
+    
+    # Relacionamentos
+    usuario = db.relationship('Usuario', backref='logs', lazy=True)
+    
+    def __repr__(self):
+        return f'<LogSistema {self.id} - {self.acao}>'
+        
+    @classmethod
+    def registrar(cls, usuario_id, acao, descricao=None, ip=None):
+        """Registra um log no sistema"""
+        log = cls(
+            usuario_id=usuario_id,
+            acao=acao,
+            descricao=descricao,
+            ip=ip
+        )
+        db.session.add(log)
+        db.session.commit()
+        return log
