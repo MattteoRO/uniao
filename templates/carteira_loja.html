@@ -27,6 +27,11 @@
                 <div class="text-center mb-4">
                     <h6 class="text-muted mb-2">Saldo Atual</h6>
                     <h2 class="display-4 text-primary">R$ {{ carteira.saldo|number_format(2, ',', '.') }}</h2>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#resumoFinanceiroModal">
+                            <i class="bi bi-info-circle"></i> Ver Detalhes do Saldo
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="d-grid gap-2">
@@ -36,9 +41,8 @@
                     <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#novaRetiradaModal">
                         <i class="bi bi-dash-circle"></i> Nova Retirada
                     </button>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#realizarSaqueModal"
-                            {% if carteira.saldo <= 0 %}disabled{% endif %}>
-                        <i class="bi bi-cash"></i> Realizar Saque Total
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#realizarSaqueModal">
+                        <i class="bi bi-cash"></i> Realizar Saque de Mão de Obra
                     </button>
                 </div>
             </div>

@@ -894,6 +894,7 @@ def api_resumo_carteira_loja():
     # Calcular resumo financeiro
     resumo = {
         'saldo_atual': carteira.saldo,
+        'saldo_servicos': 0.0,  # Novo: saldo apenas de serviços (mão de obra)
         'servicos_valor': 0.0,
         'pecas_valor': 0.0,
         'outras_entradas': 0.0,
@@ -992,6 +993,10 @@ def api_resumo_carteira_loja():
     resumo['total_receitas'] = resumo['servicos_valor'] + resumo['pecas_valor'] + resumo['outras_entradas']
     resumo['total_despesas'] = resumo['pagamentos_mecanicos'] + resumo['retiradas'] + resumo['outros_gastos']
     resumo['lucro_liquido'] = resumo['total_receitas'] - resumo['total_despesas']
+    
+    # Calcular saldo apenas de serviços
+    # Para isso, pegamos o total recebido em serviços e subtraímos as retiradas
+    resumo['saldo_servicos'] = resumo['servicos_valor'] - resumo['retiradas']
     
     return jsonify({
         'success': True,
@@ -1121,9 +1126,10 @@ def registrar_movimentacao_loja():
 
 @app.route('/carteira/loja/zerar', methods=['POST'])
 def zerar_carteira_loja():
-    """Zerar saldo da carteira da loja (saque total).
-    Permite que o saldo fique negativo para rastreamento financeiro."""
-    from models_flask import Carteira, Movimentacao
+    """Zerar saldo da carteira da loja (saque apenas do valor de serviços).
+    Permite realizar saques apenas do saldo referente a mão de obra."""
+    from models_flask import Carteira, Movimentacao, Servico
+    from datetime import datetime, timedelta
     
     # Verificar confirmação
     confirmacao = request.form.get('confirmacao')
@@ -1137,16 +1143,46 @@ def zerar_carteira_loja():
         flash('Carteira da loja não encontrada.', 'danger')
         return redirect(url_for('carteira_loja'))
     
-    # Obter saldo atual e valor desejado de saque
-    saldo_atual = carteira.saldo
-    valor_saque = float(request.form.get('valor_saque', saldo_atual))
+    # Calcular saldo apenas de serviços (mão de obra)
+    # Obtemos todos os serviços concluídos
+    servicos = Servico.query.filter(Servico.status == 'concluido').all()
+    
+    # Calculamos o valor dos serviços (apenas mão de obra)
+    valor_servicos = 0.0
+    for servico in servicos:
+        valor_total = servico.valor_servico or 0
+        porcentagem_mecanico = servico.porcentagem_mecanico or 80
+        valor_mecanico = (valor_total * porcentagem_mecanico) / 100
+        valor_loja = valor_total - valor_mecanico
+        valor_servicos += valor_loja
+    
+    # Obter o total de retiradas já realizadas
+    retiradas = Movimentacao.query.filter(
+        Movimentacao.carteira_id == carteira.id,
+        Movimentacao.valor < 0,
+        Movimentacao.justificativa.contains('[SAQUE]')
+    ).all()
+    
+    total_retiradas = 0.0
+    for retirada in retiradas:
+        total_retiradas += abs(retirada.valor)
+    
+    # Calcular saldo disponível de serviços
+    saldo_servicos_disponivel = valor_servicos - total_retiradas
+    if saldo_servicos_disponivel <= 0:
+        flash('Não há saldo de serviços disponível para saque.', 'warning')
+        return redirect(url_for('carteira_loja'))
+    
+    # Obter valor desejado de saque (limitado ao saldo de serviços disponível)
+    valor_saque = float(request.form.get('valor_saque', saldo_servicos_disponivel))
+    valor_saque = min(valor_saque, saldo_servicos_disponivel)
     
     # Verificar se o valor do saque foi definido
     if valor_saque <= 0:
         flash('Valor do saque deve ser maior que zero.', 'danger')
         return redirect(url_for('carteira_loja'))
     
-    # Criar movimentação de saque (pode resultar em saldo negativo)
+    # Criar movimentação de saque
     justificativa = request.form.get('justificativa', 'Saque realizado')
     movimentacao = Movimentacao(
         carteira_id=carteira.id,
@@ -1155,14 +1191,14 @@ def zerar_carteira_loja():
         data=datetime.now()
     )
     
-    # Atualizar saldo (pode ficar negativo)
+    # Atualizar saldo
     carteira.saldo -= valor_saque
     
     # Salvar no banco de dados
     db.session.add(movimentacao)
     db.session.commit()
     
-    flash(f"Saque total de R$ {saldo_atual:.2f} realizado com sucesso!", 'success')
+    flash(f"Saque de R$ {valor_saque:.2f} (saldo de mão de obra) realizado com sucesso!", 'success')
     return redirect(url_for('carteira_loja'))
 
 # API para obter dados do serviço (para exportação CSV)
