@@ -471,9 +471,15 @@
             <form action="{{ url_for('zerar_carteira_loja') }}" method="POST">
                 <div class="modal-body">
                     <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> Atenção! Esta operação irá zerar o saldo da carteira.
+                        <i class="bi bi-exclamation-triangle"></i> Atenção! Esta operação permite realizar um saque que pode resultar em saldo negativo para rastreamento financeiro.
                     </div>
-                    <p>Valor a ser sacado: <strong>R$ {{ carteira.saldo|number_format(2, ',', '.') }}</strong></p>
+                    <p>Saldo atual: <strong>R$ {{ carteira.saldo|number_format(2, ',', '.') }}</strong></p>
+                    <div class="mb-3">
+                        <label for="valor_saque" class="form-label">Valor a ser sacado (R$)</label>
+                        <input type="number" class="form-control" id="valor_saque" name="valor_saque" 
+                               min="0.01" step="0.01" value="{{ carteira.saldo if carteira.saldo > 0 else 0 }}" required>
+                        <div class="form-text">O saque pode resultar em saldo negativo para melhor rastreamento financeiro.</div>
+                    </div>
                     <div class="mb-3">
                         <label for="justificativa_saque" class="form-label">Justificativa do Saque</label>
                         <textarea class="form-control" id="justificativa_saque" name="justificativa" 
