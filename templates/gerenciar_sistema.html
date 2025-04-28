@@ -193,7 +193,7 @@
                         </form>
                     </div>
                     <div class="tab-pane fade" id="alterar-senha" role="tabpanel" aria-labelledby="alterar-senha-tab">
-                        <form method="POST" action="{{ url_for('alterar_senha') }}">
+                        <form method="POST" action="{{ url_for('alterar_senha', usuario_id=0) }}">
                             <div class="mb-3">
                                 <label for="usuario_id" class="form-label">Usuário</label>
                                 <select class="form-select" id="usuario_id" name="usuario_id" required>

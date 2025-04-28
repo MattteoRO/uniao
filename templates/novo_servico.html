@@ -47,10 +47,10 @@
                 <div class="col-md-4 mb-3">
                     <label for="porcentagem_mecanico" class="form-label">Porcentagem do Mecânico*</label>
                     <div class="input-group">
-                        <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" value="80" min="0" max="100" readonly>
+                        <input type="number" class="form-control" id="porcentagem_mecanico" name="porcentagem_mecanico" value="80" min="0" max="100">
                         <span class="input-group-text">%</span>
                     </div>
-                    <div class="form-text">Fixado em 80% da mão de obra</div>
+                    <div class="form-text">Porcentagem sugerida: 80% da mão de obra</div>
                 </div>
             </div>
             
@@ -273,7 +273,7 @@
     // Valores totais
     let valorTotalPecas = 0;
     let valorServico = 0;
-    let porcentagemMecanico = 80; // Fixado em 80%
+    let porcentagemMecanico = 80; // Valor inicial 80%
     
     // Modais
     const quantidadeModal = new bootstrap.Modal(document.getElementById('quantidadeModal'));
@@ -590,8 +590,12 @@
         habilitarBotoesPDF();
     });
     
-    // Porcentagem fixa em 80%
-    document.getElementById('porcentagem_display').textContent = '80%';
+    // Atualizar porcentagem do mecânico quando mudar no campo
+    document.getElementById('porcentagem_mecanico').addEventListener('input', function() {
+        porcentagemMecanico = parseInt(this.value) || 80;
+        document.getElementById('porcentagem_display').textContent = porcentagemMecanico + '%';
+        atualizarValoresTotais();
+    });
     
     // Atualizar valores totais
     function atualizarValoresTotais() {
