@@ -1229,37 +1229,375 @@ def excluir_servico(servico_id):
     
     return redirect(url_for('servicos'))
 
+# Rotas para gerenciamento do sistema
+@app.route('/sistema')
+@login_required
+def gerenciar_sistema():
+    """Página de gerenciamento do sistema."""
+    from models_flask import Usuario, LogSistema
+    
+    # Verificar se o usuário é administrador
+    usuario_id = session.get('usuario_id')
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario or not usuario.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Obter lista de usuários
+    usuarios = Usuario.query.order_by(Usuario.username).all()
+    
+    # Obter logs do sistema (limitar aos últimos 100)
+    logs = LogSistema.query.order_by(LogSistema.data.desc()).limit(100).all()
+    
+    return render_template('gerenciar_sistema.html', usuarios=usuarios, logs=logs)
+
+@app.route('/sistema/exportar')
+@login_required
+def exportar_dados():
+    """Exporta todos os dados do sistema para backup."""
+    from models_flask import Usuario, LogSistema
+    from services.backup_service import BackupService
+    
+    # Verificar se o usuário é administrador
+    usuario_id = session.get('usuario_id')
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario or not usuario.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    try:
+        # Exportar dados
+        filepath = BackupService.exportar_dados(usuario_id=usuario_id)
+        
+        # Enviar arquivo para download
+        filename = os.path.basename(filepath)
+        return redirect(url_for('static', filename=f'../backups/{filename}'))
+    except Exception as e:
+        flash(f'Erro ao exportar dados: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/importar', methods=['POST'])
+@login_required
+def importar_dados():
+    """Importa dados do sistema a partir de um arquivo JSON."""
+    from models_flask import Usuario, LogSistema
+    from services.backup_service import BackupService
+    
+    # Verificar se o usuário é administrador
+    usuario_id = session.get('usuario_id')
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario or not usuario.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Verificar se foi enviado um arquivo
+    if 'arquivo' not in request.files:
+        flash('Nenhum arquivo enviado.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    arquivo = request.files['arquivo']
+    if arquivo.filename == '':
+        flash('Nenhum arquivo selecionado.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    if not arquivo.filename.endswith('.json'):
+        flash('O arquivo deve ser um JSON.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    try:
+        # Salvar arquivo temporário
+        filepath = os.path.join(os.getcwd(), 'temp_import.json')
+        arquivo.save(filepath)
+        
+        # Importar dados
+        if BackupService.importar_dados(filepath, usuario_id=usuario_id):
+            flash('Dados importados com sucesso!', 'success')
+        else:
+            flash('Erro ao importar dados.', 'danger')
+        
+        # Remover arquivo temporário
+        if os.path.exists(filepath):
+            os.unlink(filepath)
+        
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        flash(f'Erro ao importar dados: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/reset', methods=['POST'])
+@login_required
+def resetar_sistema():
+    """Restaura o sistema para o estado inicial."""
+    from models_flask import Usuario, LogSistema
+    from services.backup_service import BackupService
+    
+    # Verificar se o usuário é administrador
+    usuario_id = session.get('usuario_id')
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario or not usuario.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Verificar confirmação
+    confirmacao = request.form.get('confirmacao')
+    if confirmacao != 'CONFIRMAR':
+        flash('Confirmação inválida. O sistema não foi resetado.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    try:
+        # Resetar sistema
+        if BackupService.resetar_sistema(usuario_id=usuario_id):
+            flash('Sistema restaurado para o estado inicial com sucesso!', 'success')
+        else:
+            flash('Erro ao resetar sistema.', 'danger')
+        
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        flash(f'Erro ao resetar sistema: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/usuario/adicionar', methods=['POST'])
+@login_required
+def adicionar_usuario():
+    """Adiciona um novo usuário ao sistema."""
+    from models_flask import Usuario, LogSistema
+    
+    # Verificar se o usuário é administrador
+    usuario_id = session.get('usuario_id')
+    usuario = Usuario.query.get(usuario_id)
+    if not usuario or not usuario.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Obter dados do formulário
+    username = request.form.get('username')
+    nome = request.form.get('nome')
+    senha = request.form.get('senha')
+    confirmacao = request.form.get('confirmacao_senha')
+    admin = request.form.get('admin') == 'on'
+    
+    # Validar dados
+    if not username or not nome or not senha:
+        flash('Todos os campos são obrigatórios.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    if senha != confirmacao:
+        flash('As senhas não conferem.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    # Verificar se username já existe
+    usuario_existente = Usuario.query.filter_by(username=username).first()
+    if usuario_existente:
+        flash('Este nome de usuário já está em uso.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    try:
+        # Criar usuário
+        novo_usuario = Usuario.criar(
+            username=username,
+            nome=nome,
+            senha=senha,
+            admin=admin
+        )
+        
+        db.session.add(novo_usuario)
+        db.session.commit()
+        
+        # Registrar log
+        LogSistema.registrar(
+            usuario_id=usuario_id,
+            acao="Criação de Usuário",
+            descricao=f"Novo usuário criado: {username} ({nome})"
+        )
+        
+        flash('Usuário adicionado com sucesso!', 'success')
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao adicionar usuário: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/usuario/<int:usuario_id>/alterar-senha', methods=['POST'])
+@login_required
+def alterar_senha():
+    """Altera a senha de um usuário."""
+    from models_flask import Usuario, LogSistema
+    
+    # Verificar se o usuário é administrador
+    admin_id = session.get('usuario_id')
+    admin = Usuario.query.get(admin_id)
+    if not admin or not admin.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Obter dados do formulário
+    usuario_id = request.form.get('usuario_id')
+    nova_senha = request.form.get('nova_senha')
+    confirmacao = request.form.get('confirmacao_nova_senha')
+    
+    # Validar dados
+    if not usuario_id or not nova_senha:
+        flash('Todos os campos são obrigatórios.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    if nova_senha != confirmacao:
+        flash('As senhas não conferem.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    try:
+        # Buscar usuário
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            flash('Usuário não encontrado.', 'danger')
+            return redirect(url_for('gerenciar_sistema'))
+        
+        # Alterar senha
+        usuario.alterar_senha(nova_senha)
+        db.session.commit()
+        
+        # Registrar log
+        LogSistema.registrar(
+            usuario_id=admin_id,
+            acao="Alteração de Senha",
+            descricao=f"Senha alterada para o usuário: {usuario.username} ({usuario.nome})"
+        )
+        
+        flash('Senha alterada com sucesso!', 'success')
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao alterar senha: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/usuario/<int:usuario_id>/ativar')
+@login_required
+def ativar_usuario(usuario_id):
+    """Ativa um usuário desativado."""
+    from models_flask import Usuario, LogSistema
+    
+    # Verificar se o usuário é administrador
+    admin_id = session.get('usuario_id')
+    admin = Usuario.query.get(admin_id)
+    if not admin or not admin.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    try:
+        # Buscar usuário
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            flash('Usuário não encontrado.', 'danger')
+            return redirect(url_for('gerenciar_sistema'))
+        
+        # Ativar usuário
+        usuario.ativo = True
+        db.session.commit()
+        
+        # Registrar log
+        LogSistema.registrar(
+            usuario_id=admin_id,
+            acao="Ativação de Usuário",
+            descricao=f"Usuário ativado: {usuario.username} ({usuario.nome})"
+        )
+        
+        flash('Usuário ativado com sucesso!', 'success')
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao ativar usuário: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
+@app.route('/sistema/usuario/<int:usuario_id>/desativar')
+@login_required
+def desativar_usuario(usuario_id):
+    """Desativa um usuário ativo."""
+    from models_flask import Usuario, LogSistema
+    
+    # Verificar se o usuário é administrador
+    admin_id = session.get('usuario_id')
+    admin = Usuario.query.get(admin_id)
+    if not admin or not admin.admin:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Verificar se não é o próprio usuário
+    if int(usuario_id) == int(admin_id):
+        flash('Você não pode desativar seu próprio usuário.', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+    
+    try:
+        # Buscar usuário
+        usuario = Usuario.query.get(usuario_id)
+        if not usuario:
+            flash('Usuário não encontrado.', 'danger')
+            return redirect(url_for('gerenciar_sistema'))
+        
+        # Desativar usuário
+        usuario.ativo = False
+        db.session.commit()
+        
+        # Registrar log
+        LogSistema.registrar(
+            usuario_id=admin_id,
+            acao="Desativação de Usuário",
+            descricao=f"Usuário desativado: {usuario.username} ({usuario.nome})"
+        )
+        
+        flash('Usuário desativado com sucesso!', 'success')
+        return redirect(url_for('gerenciar_sistema'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao desativar usuário: {str(e)}', 'danger')
+        return redirect(url_for('gerenciar_sistema'))
+
 # Inicialização do banco de dados
 with app.app_context():
     # Import models here to ensure they're registered with SQLAlchemy
     import models_flask
+    from models_flask import Usuario, Configuracao, Carteira
     
     try:
         # Try to create missing tables only
         db.create_all()
         
-        # Ensure a default configuration exists
-        config = models_flask.Configuracao.query.first()
+        # Verificar se existe pelo menos um usuário administrador
+        usuario_admin = Usuario.query.filter_by(admin=True).first()
+        if not usuario_admin:
+            # Criar usuário administrador padrão
+            Usuario.criar(
+                username=DEFAULT_USERNAME, 
+                nome="Administrador", 
+                senha=DEFAULT_PASSWORD,
+                admin=True
+            )
+            
+            # Registrar no log
+            app.logger.info("Usuário administrador padrão criado com sucesso!")
+        
+        # Verificar se existe uma configuração
+        config = Configuracao.query.first()
         if not config:
-            config = models_flask.Configuracao(
-                nome_empresa='Monark Motopeças e Bicicletaria',
-                endereco='Endereço não cadastrado',
-                telefone='',
-                caminho_csv='bdmonarkbd.csv'
+            # Criar configuração padrão
+            config = Configuracao(
+                nome_empresa="Monark Motopeças e Bicicletaria",
+                caminho_csv="bdmonarkbd.csv"
             )
             db.session.add(config)
             db.session.commit()
+            
+            # Registrar no log
+            app.logger.info("Configuração padrão criada com sucesso!")
         
-        # Ensure a wallet for the store exists
-        carteira_loja = models_flask.Carteira.query.filter_by(tipo='loja').first()
+        # Verificar se existe uma carteira da loja
+        carteira_loja = Carteira.query.filter_by(tipo='loja').first()
         if not carteira_loja:
-            carteira_loja = models_flask.Carteira(
-                tipo='loja',
-                mecanico_id=None,
-                saldo=0.0
-            )
+            # Criar carteira da loja
+            carteira_loja = Carteira(tipo='loja', saldo=0.0)
             db.session.add(carteira_loja)
             db.session.commit()
+            
+            # Registrar no log
+            app.logger.info("Carteira da loja criada com sucesso!")
     except Exception as e:
         print(f"Erro na inicialização do banco de dados: {e}")
         # Se houve erro na criação de tabelas, provavelmente é porque elas já existem
