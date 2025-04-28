@@ -122,7 +122,7 @@ class PDFExtratoGenerator:
                 ["Data", "Valor", "Justificativa"]
             ]
             
-            # Adicionar linhas de movimentações
+            # Adicionar linhas de movimentações (tudo em maiúsculas, exceto cabeçalho)
             for mov in movimentacoes:
                 try:
                     data_mov = datetime.fromisoformat(mov['data']).strftime('%d/%m/%Y')
@@ -133,7 +133,7 @@ class PDFExtratoGenerator:
                 justificativa = mov['justificativa']
                 
                 data.append([
-                    data_mov,
+                    data_mov.upper(),
                     f"R$ {valor:.2f}".replace('.', ','),
                     justificativa.upper() if justificativa else ""
                 ])

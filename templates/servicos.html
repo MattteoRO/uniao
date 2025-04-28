@@ -324,26 +324,8 @@
                 const id = this.getAttribute('data-id');
                 const tipo = this.getAttribute('data-tipo');
                 
-                // Fazer requisição AJAX para gerar o PDF
-                fetch(`/servicos/gerar_pdf/${id}/${tipo}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Criar link de download para o PDF
-                            const link = document.createElement('a');
-                            link.href = data.filepath;
-                            link.download = data.filename || 'documento.pdf';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                        } else {
-                            alert('Erro ao gerar o PDF. Por favor, tente novamente.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro:', error);
-                        alert('Erro ao gerar o PDF. Por favor, tente novamente.');
-                    });
+                // Download direto do PDF - redirecionando para a URL
+                window.location.href = `/servicos/gerar_pdf/${id}/${tipo}`;
             });
         });
     });

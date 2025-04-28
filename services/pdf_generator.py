@@ -527,7 +527,7 @@ class PDFGenerator:
                     peca.get('peca_id', 'N/A').upper(),
                     peca.get('descricao', 'N/A').upper(),
                     f"R$ {valor_unitario:.2f}".replace('.', ','),
-                    str(quantidade),
+                    str(quantidade).upper(),
                     f"R$ {total:.2f}".replace('.', ',')
                 ])
             

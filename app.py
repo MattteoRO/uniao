@@ -517,7 +517,13 @@ def gerar_pdf_servico(servico_id, tipo):
     else:
         return jsonify({'error': 'Tipo de relatório inválido'})
     
-    return jsonify({'success': True, 'filepath': filepath, 'filename': filename})
+    # Retorna o arquivo para download direto ao invés de apenas o caminho
+    return send_file(
+        filepath,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
 
 @app.route('/configuracoes', methods=['GET', 'POST'])
 def configuracoes():
