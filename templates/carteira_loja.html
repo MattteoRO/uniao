@@ -144,6 +144,60 @@
     </div>
 </div>
 
+<!-- Modal Resumo Financeiro Simplificado -->
+<div class="modal fade" id="resumoFinanceiroModal" tabindex="-1" aria-labelledby="resumoFinanceiroModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="resumoFinanceiroModalLabel">Detalhes do Saldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Detalhamento do saldo atual da loja com separação entre serviços (mão de obra) e peças.
+                </div>
+                
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Saldos Detalhados</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th>Saldo Total:</th>
+                                    <td class="text-end">R$ <span id="resumo_simples_saldo_total">{{ carteira.saldo|number_format(2, ',', '.') }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Saldo de Serviços (mão de obra):</th>
+                                    <td class="text-end text-success" id="resumo_simples_servicos">Calculando...</td>
+                                </tr>
+                                <tr>
+                                    <th>Saldo de Peças:</th>
+                                    <td class="text-end text-primary" id="resumo_simples_pecas">Calculando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="alert alert-warning mt-3">
+                            <strong>Importante:</strong> Apenas o saldo de serviços (mão de obra) pode ser retirado via saque.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-info" onclick="verResumoFinanceiro()">
+                        <i class="bi bi-graph-up"></i> Ver Relatório Financeiro Completo
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Ver Resumo Financeiro -->
 <div class="modal fade" id="verResumoModal" tabindex="-1" aria-labelledby="verResumoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -469,20 +523,38 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="realizarSaqueModalLabel">Realizar Saque Total</h5>
+                <h5 class="modal-title" id="realizarSaqueModalLabel">Saque de Saldo de Mão de Obra</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{{ url_for('zerar_carteira_loja') }}" method="POST">
                 <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> Atenção! Esta operação permite realizar um saque que pode resultar em saldo negativo para rastreamento financeiro.
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Esta operação permite realizar saques apenas do valor de mão de obra (serviços), não incluindo valores de peças.
                     </div>
-                    <p>Saldo atual: <strong>R$ {{ carteira.saldo|number_format(2, ',', '.') }}</strong></p>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Informações de Saldo</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-7">Saldo total disponível:</div>
+                                <div class="col-5 text-end"><strong>R$ {{ carteira.saldo|number_format(2, ',', '.') }}</strong></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-7">Saldo de serviços disponível:</div>
+                                <div class="col-5 text-end text-success" id="saldo_servicos_display">
+                                    <strong>Calculando...</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="valor_saque" class="form-label">Valor a ser sacado (R$)</label>
                         <input type="number" class="form-control" id="valor_saque" name="valor_saque" 
-                               min="0.01" step="0.01" value="{{ carteira.saldo if carteira.saldo > 0 else 0 }}" required>
-                        <div class="form-text">O saque pode resultar em saldo negativo para melhor rastreamento financeiro.</div>
+                               min="0.01" step="0.01" value="0" required>
+                        <div class="form-text">O sistema permitirá sacar apenas o valor disponível de serviços.</div>
                     </div>
                     <div class="mb-3">
                         <label for="justificativa_saque" class="form-label">Justificativa do Saque</label>
@@ -657,6 +729,77 @@
         return valor.toFixed(2).replace('.', ',');
     }
     
+    // Função para carregar dados ao abrir modais
+    document.addEventListener('show.bs.modal', function (event) {
+        // Carregar dados para o modal de resumo financeiro simples
+        if (event.target.id === 'resumoFinanceiroModal') {
+            fetch('/api/carteira/loja/resumo')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.success) {
+                        const resumo = data.resumo;
+                        
+                        // Calcular saldo de peças (saldo total - saldo de serviços)
+                        const saldoTotal = resumo.saldo_atual;
+                        const saldoServicos = resumo.saldo_servicos;
+                        const saldoPecas = saldoTotal - saldoServicos;
+                        
+                        // Atualizar interface
+                        document.getElementById('resumo_simples_saldo_total').textContent = formatarValor(saldoTotal);
+                        document.getElementById('resumo_simples_servicos').textContent = `R$ ${formatarValor(saldoServicos)}`;
+                        document.getElementById('resumo_simples_pecas').textContent = `R$ ${formatarValor(saldoPecas)}`;
+                    } else {
+                        document.getElementById('resumo_simples_servicos').textContent = 'Erro ao calcular';
+                        document.getElementById('resumo_simples_pecas').textContent = 'Erro ao calcular';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao obter saldo:', error);
+                    document.getElementById('resumo_simples_servicos').textContent = 'Erro ao calcular';
+                    document.getElementById('resumo_simples_pecas').textContent = 'Erro ao calcular';
+                });
+        }
+        
+        // Carregar dados para o modal de saque
+        if (event.target.id === 'realizarSaqueModal') {
+            // Obter saldo de serviços disponível via API
+            fetch('/api/carteira/loja/resumo')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.success) {
+                        const saldoServicos = data.resumo.saldo_servicos;
+                        
+                        // Atualizar exibição do saldo de serviços
+                        document.getElementById('saldo_servicos_display').innerHTML = 
+                            `<strong>R$ ${formatarValor(saldoServicos)}</strong>`;
+                        
+                        // Atualizar valor máximo disponível para saque
+                        const inputValorSaque = document.getElementById('valor_saque');
+                        
+                        // Só permite valores positivos
+                        if (saldoServicos > 0) {
+                            inputValorSaque.value = formatarValor(saldoServicos);
+                            inputValorSaque.max = saldoServicos;
+                            inputValorSaque.disabled = false;
+                        } else {
+                            inputValorSaque.value = "0,00";
+                            inputValorSaque.disabled = true;
+                            document.getElementById('saldo_servicos_display').innerHTML = 
+                                `<strong class="text-danger">R$ 0,00 (Não disponível)</strong>`;
+                        }
+                    } else {
+                        document.getElementById('saldo_servicos_display').innerHTML = 
+                            `<strong class="text-danger">Erro ao calcular</strong>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao obter saldo:', error);
+                    document.getElementById('saldo_servicos_display').innerHTML = 
+                        `<strong class="text-danger">Erro ao calcular</strong>`;
+                });
+        }
+    });
+
     // Função para carregar os dados financeiros detalhados
     function verResumoFinanceiro() {
         // Obter parâmetros de filtro atuais
