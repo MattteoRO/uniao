@@ -1,0 +1,95 @@
+{
+  "data_backup": "2025-04-28T01:34:29.409025",
+  "mecanicos": [
+    {
+      "id": 2,
+      "nome": "Luiz Campos",
+      "telefone": "69993059302",
+      "data_cadastro": "2025-04-28T01:19:47.239156",
+      "ativo": true
+    }
+  ],
+  "carteiras": [
+    {
+      "id": 3,
+      "tipo": "mecanico",
+      "mecanico_id": 2,
+      "saldo": 80.0
+    },
+    {
+      "id": 4,
+      "tipo": "loja",
+      "mecanico_id": null,
+      "saldo": 140.0
+    }
+  ],
+  "movimentacoes": [
+    {
+      "id": 16,
+      "carteira_id": 3,
+      "valor": 80.0,
+      "justificativa": "Pagamento de serviço #8",
+      "data": "2025-04-28T01:22:26.239075",
+      "servico_id": 8
+    },
+    {
+      "id": 17,
+      "carteira_id": 4,
+      "valor": 20.0,
+      "justificativa": "Recebimento de serviço #8 (20% da mão de obra)",
+      "data": "2025-04-28T01:22:26.438061",
+      "servico_id": 8
+    },
+    {
+      "id": 18,
+      "carteira_id": 4,
+      "valor": 120.0,
+      "justificativa": "Peças do serviço #8",
+      "data": "2025-04-28T01:22:26.438321",
+      "servico_id": 8
+    }
+  ],
+  "servicos": [
+    {
+      "id": 8,
+      "cliente": "Mateus Campos",
+      "telefone": "69993059302",
+      "descricao": "Troca de Pneu",
+      "mecanico_id": 2,
+      "valor_servico": 100.0,
+      "porcentagem_mecanico": 80,
+      "data_criacao": "2025-04-28T01:20:52.060438",
+      "status": "concluido"
+    }
+  ],
+  "servico_pecas": [
+    {
+      "id": 8,
+      "servico_id": 8,
+      "peca_id": "9",
+      "descricao": "PNEU 29 X 2.10 HUTCHINSON",
+      "codigo_barras": "7800000000092",
+      "preco_unitario": 120.0,
+      "quantidade": 1
+    }
+  ],
+  "configuracoes": [
+    {
+      "id": 2,
+      "nome_empresa": "Monark Motopeças e Bicicletaria",
+      "endereco": "",
+      "telefone": "",
+      "caminho_csv": "bdmonarkbd.csv"
+    }
+  ],
+  "usuarios": [
+    {
+      "id": 1,
+      "username": "1",
+      "nome": "Administrador",
+      "data_cadastro": "2025-04-28T00:20:49.143848",
+      "ativo": true,
+      "admin": true
+    }
+  ]
+}

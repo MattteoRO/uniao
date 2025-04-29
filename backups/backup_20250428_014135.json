@@ -1,0 +1,103 @@
+{
+  "data_backup": "2025-04-28T01:41:35.088477",
+  "mecanicos": [
+    {
+      "id": 3,
+      "nome": "Luiz Campos",
+      "telefone": "69993059302",
+      "data_cadastro": "2025-04-28T01:36:21.804626",
+      "ativo": true
+    }
+  ],
+  "carteiras": [
+    {
+      "id": 6,
+      "tipo": "loja",
+      "mecanico_id": null,
+      "saldo": 300.0
+    },
+    {
+      "id": 5,
+      "tipo": "mecanico",
+      "mecanico_id": 3,
+      "saldo": 0.0
+    }
+  ],
+  "movimentacoes": [
+    {
+      "id": 19,
+      "carteira_id": 5,
+      "valor": 80.0,
+      "justificativa": "Pagamento de serviço #9",
+      "data": "2025-04-28T01:39:39.019542",
+      "servico_id": 9
+    },
+    {
+      "id": 20,
+      "carteira_id": 6,
+      "valor": 20.0,
+      "justificativa": "Recebimento de serviço #9 (20% da mão de obra)",
+      "data": "2025-04-28T01:39:39.216605",
+      "servico_id": 9
+    },
+    {
+      "id": 21,
+      "carteira_id": 6,
+      "valor": 280.0,
+      "justificativa": "Peças do serviço #9",
+      "data": "2025-04-28T01:39:39.216721",
+      "servico_id": 9
+    },
+    {
+      "id": 22,
+      "carteira_id": 5,
+      "valor": -80.0,
+      "justificativa": "Pagamento realizado",
+      "data": "2025-04-28T01:40:32.995914",
+      "servico_id": null
+    }
+  ],
+  "servicos": [
+    {
+      "id": 9,
+      "cliente": "Mateus Campos",
+      "telefone": "69993059302",
+      "descricao": "troca de oleo",
+      "mecanico_id": 3,
+      "valor_servico": 100.0,
+      "porcentagem_mecanico": 80,
+      "data_criacao": "2025-04-28T01:37:56.441709",
+      "status": "concluido"
+    }
+  ],
+  "servico_pecas": [
+    {
+      "id": 9,
+      "servico_id": 9,
+      "peca_id": "12",
+      "descricao": "FREIO DISCO HIDR COMPLETO",
+      "codigo_barras": "7800000000122",
+      "preco_unitario": 280.0,
+      "quantidade": 1
+    }
+  ],
+  "configuracoes": [
+    {
+      "id": 3,
+      "nome_empresa": "Monark Motopeças e Bicicletaria",
+      "endereco": "",
+      "telefone": "",
+      "caminho_csv": "bdmonarkbd.csv"
+    }
+  ],
+  "usuarios": [
+    {
+      "id": 1,
+      "username": "1",
+      "nome": "Administrador",
+      "data_cadastro": "2025-04-28T00:20:49.143848",
+      "ativo": true,
+      "admin": true
+    }
+  ]
+}
